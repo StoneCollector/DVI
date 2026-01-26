@@ -1,6 +1,9 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class Carasol extends StatefulWidget {
   const Carasol({super.key});
@@ -10,38 +13,8 @@ class Carasol extends StatefulWidget {
 }
 
 class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
-  List<Map<String, String>> carouselData = [
-    {
-      'image': 'assets/images/hero2.jpg',
-      'title': 'Live Concert Experiences',
-      'subtitle': 'High-energy stages, sound, lights and crowd management',
-    },
-    {
-      'image': 'assets/images/hero3.jpg',
-      'title': 'Tech Events',
-      'subtitle': 'Seamless planning for conferences, hackathons and summits',
-    },
-    {
-      'image': 'assets/images/hero4.jpg',
-      'title': 'Grand Public Events',
-      'subtitle': 'From permits to production, we manage it all',
-    },
-    {
-      'image': 'assets/images/hero5.jpg',
-      'title': 'Premium Gatherings',
-      'subtitle': 'Elegant setups for launches, networking and celebrations',
-    },
-    {
-      'image': 'assets/images/hero6.jpg',
-      'title': 'Luxury Wedding Plannings',
-      'subtitle': 'Beautiful moments crafted with precision and care',
-    },
-    {
-      'image': 'assets/images/hero7.jpg',
-      'title': 'Professional Conferences',
-      'subtitle': 'Perfect venues with complete event infrastructure',
-    },
-  ];
+  List<Map<String, dynamic>> carouselData = [];
+  bool isLoading = true;
 
   int _currentIndex = 0;
   late AnimationController _animationController;
@@ -51,9 +24,29 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 3),
+      duration: Duration(seconds: 3),
     );
     _animationController.forward();
+    _fetchCarouselData();
+  }
+
+  Future<void> _fetchCarouselData() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('carousel_items')
+          .select()
+          .order('display_order');
+
+      setState(() {
+        carouselData = List<Map<String, dynamic>>.from(response);
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching carousel data: $e');
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -64,6 +57,19 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (carouselData.isEmpty) {
+      return Center(
+        child: Text(
+          'No carousel items yet. Add some in Profile!',
+          style: GoogleFonts.urbanist(fontSize: 14, color: Colors.grey),
+        ),
+      );
+    }
+
     return Column(
       children: [
         SizedBox(
@@ -72,12 +78,12 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
             items: carouselData
                 .map(
                   (item) => Container(
-                    margin: const EdgeInsets.all(1),
+                    margin: EdgeInsets.all(1),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
-                          color: Color.fromARGB(110, 145, 141, 141),
+                          color: const Color.fromARGB(110, 145, 141, 141),
                           blurRadius: 10,
                           spreadRadius: 0,
                           offset: Offset(0, 4),
@@ -89,10 +95,21 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
                         // Background Image
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: Image.asset(
-                            item['image']!,
+                          child: CachedNetworkImage(
+                            imageUrl: SupabaseConfig.getImageUrl(
+                              item['image_filename']!,
+                            ),
                             width: double.infinity,
                             fit: BoxFit.cover,
+                            memCacheHeight: 600, // Optimize for banner size
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey[300],
+                              child: Center(child: CircularProgressIndicator()),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Colors.grey[300],
+                              child: Icon(Icons.error),
+                            ),
                           ),
                         ),
                         // Gradient Overlay
@@ -103,8 +120,8 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Colors.black.withValues(alpha: 0.3),
-                                Colors.black.withValues(alpha: 0.6),
+                                Colors.black.withOpacity(0.3),
+                                Colors.black.withOpacity(0.6),
                               ],
                             ),
                           ),
@@ -132,7 +149,7 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
                                   item['subtitle']!,
                                   textAlign: TextAlign.center,
@@ -140,7 +157,7 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
                                   style: GoogleFonts.urbanist(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white.withValues(alpha: 0.95),
+                                    color: Colors.white.withOpacity(0.95),
                                     height: 1.2,
                                   ),
                                 ),
@@ -156,8 +173,8 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
             options: CarouselOptions(
               height: 200,
               autoPlay: true,
-              autoPlayInterval: const Duration(seconds: 3),
-              autoPlayAnimationDuration: const Duration(milliseconds: 800),
+              autoPlayInterval: Duration(seconds: 3),
+              autoPlayAnimationDuration: Duration(milliseconds: 800),
               enlargeCenterPage: true,
               aspectRatio: 16 / 9,
               viewportFraction: 0.8,
@@ -171,14 +188,14 @@ class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
             ),
           ),
         ),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(carouselData.length, (index) {
             bool isActive = index == _currentIndex;
             return AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
+              duration: Duration(milliseconds: 300),
+              margin: EdgeInsets.symmetric(horizontal: 3),
               child: isActive
                   ? AnimatedBuilder(
                       animation: _animationController,

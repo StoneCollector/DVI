@@ -262,16 +262,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     TrendingTile(
                       title: "Gold Wedding Package",
                       price: "₹ 5,00,000",
+                      imageFileName: "hero1.jpg",
                     ),
                     SizedBox(width: 10),
                     TrendingTile(
                       title: "Executive Conference Setup",
                       price: "₹ 4,30,000",
+                      imageFileName: "hero2.jpg",
                     ),
                     SizedBox(width: 10),
                     TrendingTile(
                       title: "Luxury Party Package",
                       price: "₹ 7,50,000",
+                      imageFileName: "hero3.jpg",
                     ),
                   ],
                 ),

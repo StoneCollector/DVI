@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -9,15 +10,24 @@ import 'screens/history/history_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'screens/booking/book_package_screen.dart';
 import 'screens/booking/book_service_screen.dart';
+import 'screens/packages/filter_package_list_screen.dart';
+import 'pages/main_navigation.dart';
+import 'pages/vendor_categories_page.dart';
+import 'pages/welcome_page.dart';
 import 'utils/constants.dart';
 
 void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase
-  // This loads credentials from .env and sets up the client
-  // Password hashing and auth are handled automatically by Supabase
+  // Initialize Supabase with inline credentials (Supply directory approach)
+  await Supabase.initialize(
+    url: 'https://zyozigpldjruomhqaqjy.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5b3ppZ3BsZGpydW9taHFhcWp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMDIyNzcsImV4cCI6MjA4NDU3ODI3N30.FM-bzBD-zN1soAFNGKTemhPYpju6ytARrISrBwTtDKA',
+  );
+
+  // Also initialize the existing config for auth
   await SupabaseConfig.initialize();
 
   runApp(const DreamVentzApp());
@@ -43,13 +53,15 @@ class DreamVentzApp extends StatelessWidget {
         AppConstants.signupRoute: (context) => const SignUpScreen(),
         AppConstants.forgotPasswordRoute: (context) =>
             const ForgotPasswordScreen(),
-        AppConstants.homeRoute: (context) => const HomeScreen(),
+        AppConstants.homeRoute: (context) => const MainNavigation(),
         '/homepage': (context) => const HomeScreen(),
         '/bookingspage': (context) => const BookingsScreen(),
         '/historypage': (context) => const HistoryScreen(),
         '/profilepage': (context) => const ProfileScreen(),
         '/bookpackage': (context) => const BookPackageScreen(),
         '/bookservice': (context) => const BookServiceScreen(),
+        '/vendorcategories': (context) => const VendorCategoriesPage(),
+        '/packages': (context) => const FilterPackageListScreen(),
       },
     );
   }
@@ -93,9 +105,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // Navigate based on auth state
     // If user is authenticated, go to home, otherwise login
     if (SupabaseConfig.isAuthenticated) {
-      return const HomeScreen();
+      return const MainNavigation();
     } else {
-      return const LoginScreen();
+      return const WelcomePage();
     }
   }
 }

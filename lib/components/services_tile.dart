@@ -4,36 +4,41 @@ import 'package:google_fonts/google_fonts.dart';
 class ServicesTile extends StatelessWidget {
   final IconData icon;
   final String label;
-  const ServicesTile({super.key, required this.icon, required this.label});
+  final VoidCallback? onTap;
+  const ServicesTile({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromARGB(110, 145, 141, 141),
-            blurRadius: 10,
-            spreadRadius: 0,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          IconButton(
-            onPressed: () {},
-            icon: Icon(
-              icon,
-              color: Color.fromARGB(255, 212, 175, 55),
-              size: 30,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Color(0xFFFFF8E1), // Soft pastel amber/gold background
+          borderRadius: BorderRadius.circular(24), // Squircle shape
+          // Removed shadow for flatter One UI look, or use very subtle one
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Color(0xFFD4AF37), size: 32),
+            SizedBox(height: 8),
+            Text(
+              label.trim(), // Trim extra spaces
+              style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Color(0xff0c1c2c),
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          Text(label, style: GoogleFonts.urbanist(fontWeight: FontWeight.w500),),
-        ],
+          ],
+        ),
       ),
     );
   }

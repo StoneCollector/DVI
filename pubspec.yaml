@@ -36,7 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # Supabase client for authentication and database
-  supabase_flutter: ^2.8.0
+  supabase_flutter: ^2.12.0
   
   # Environment variables management
   flutter_dotenv: ^6.0.0
@@ -48,10 +48,19 @@ dependencies:
   url_launcher: ^6.3.1
   
   # Google Fonts for UI typography
-  google_fonts: ^6.1.0
+  google_fonts: ^6.3.3
   
   # Carousel slider for hero banners (v5 to avoid conflict with Material carousel)
-  carousel_slider: ^5.0.0
+  carousel_slider: ^5.1.1
+  
+  # Cached network images for performance
+  cached_network_image: ^3.4.1
+  
+  # Image picker for content management
+  image_picker: ^1.1.2
+  
+  # Permission handler for image access
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +88,7 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+    - lib/images/
     - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see

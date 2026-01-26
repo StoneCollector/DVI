@@ -38,6 +38,7 @@ migrate_working_dir/
 
 # Reference/supply files
 supply/
+Supply/
 
 # Symbolication related
 app.*.symbols
