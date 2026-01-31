@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
@@ -20,14 +19,7 @@ void main() async {
   // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Supabase with inline credentials (Supply directory approach)
-  await Supabase.initialize(
-    url: 'https://zyozigpldjruomhqaqjy.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5b3ppZ3BsZGpydW9taHFhcWp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwMDIyNzcsImV4cCI6MjA4NDU3ODI3N30.FM-bzBD-zN1soAFNGKTemhPYpju6ytARrISrBwTtDKA',
-  );
-
-  // Also initialize the existing config for auth
+  // Initialize Supabase from .env file
   await SupabaseConfig.initialize();
 
   runApp(const DreamVentzApp());
