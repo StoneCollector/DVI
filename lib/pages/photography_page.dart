@@ -1,18 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/vendor_tile.dart';
+import 'package:dreamventz/models/vendor_card.dart';
+import 'package:dreamventz/services/vendor_card_service.dart';
 
 class PhotographyPage extends StatefulWidget {
   final String categoryName;
+  final int categoryId;
 
-  const PhotographyPage({super.key, required this.categoryName});
+  const PhotographyPage({
+    super.key, 
+    required this.categoryName,
+    required this.categoryId,
+  });
 
   @override
   State<PhotographyPage> createState() => _PhotographyPageState();
 }
 
 class _PhotographyPageState extends State<PhotographyPage> {
-  // Static data for photographers
+
+  // Data from Supabase
+  List<VendorCard> allVendorCards = [];
+  List<VendorCard> filteredVendorCards = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  // Static data for photographers (BACKUP - will be replaced by Supabase data)
   List<Map<String, dynamic>> allPhotographers = [
     {
       'studioName': 'Raj Photo Studio',
@@ -104,74 +118,88 @@ class _PhotographyPageState extends State<PhotographyPage> {
   
   // Service tags filter
   List<String> selectedServiceTags = [];
-  List<String> availableServiceTags = [
-    'Wedding Photographer',
-    'Videography',
-    'Editing',
-    'Pre-wedding',
-    'Candid Photography',
-    'Cinematic Photography',
-    'Traditional Photography',
-    'Quality Service',
-    'Experienced',
-    'Customizable',
-  ];
+  List<String> availableServiceTags = [];
+  List<String> availableCities = [];
 
   @override
   void initState() {
     super.initState();
-    filteredPhotographers = List.from(allPhotographers);
+    _loadVendorCards();
+  }
+
+  Future<void> _loadVendorCards() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final service = VendorCardService();
+      
+      // Fetch vendor cards
+      allVendorCards = await service.getVendorCardsByCategory(widget.categoryId);
+      
+      // Fetch cities and tags
+      availableCities = await service.getUniqueCities(widget.categoryId);
+      availableServiceTags = await service.getAllServiceTags(widget.categoryId);
+      
+      setState(() {
+        filteredVendorCards = List.from(allVendorCards);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to load vendors: $e';
+        isLoading = false;
+      });
+    }
   }
 
   void _applyFilters() {
     setState(() {
-      filteredPhotographers = List.from(allPhotographers);
+      filteredVendorCards = List.from(allVendorCards);
 
       // City filter
       if (selectedCity != 'All') {
-        filteredPhotographers = filteredPhotographers
-            .where((p) => p['location'] == selectedCity)
+        filteredVendorCards = filteredVendorCards
+            .where((card) => card.city == selectedCity)
             .toList();
       }
 
       // Service tags filter
       if (selectedServiceTags.isNotEmpty) {
-        filteredPhotographers = filteredPhotographers.where((p) {
-          List<String> photographerServiceTags = List<String>.from(p['serviceTags'] ?? []);
-          List<String> photographerQualityTags = List<String>.from(p['qualityTags'] ?? []);
+        filteredVendorCards = filteredVendorCards.where((card) {
           // Combine both service and quality tags
-          List<String> allPhotographerTags = [...photographerServiceTags, ...photographerQualityTags];
-          // Check if ALL selected tags are present in the photographer's tags (AND logic)
+          List<String> allTags = [...card.serviceTags, ...card.qualityTags];
+          // Check if ALL selected tags are present in the card's tags (AND logic)
           return selectedServiceTags.every((selectedTag) => 
-            allPhotographerTags.contains(selectedTag)
+            allTags.contains(selectedTag)
           );
         }).toList();
       }
 
       // Budget filter
       if (budgetRange == 'Under 20k') {
-        filteredPhotographers = filteredPhotographers
-            .where((p) => p['budget'] < 20000)
+        filteredVendorCards = filteredVendorCards
+            .where((card) => card.discountedPrice < 20000)
             .toList();
       } else if (budgetRange == '20k-30k') {
-        filteredPhotographers = filteredPhotographers
-            .where((p) => p['budget'] >= 20000 && p['budget'] <= 30000)
+        filteredVendorCards = filteredVendorCards
+            .where((card) => card.discountedPrice >= 20000 && card.discountedPrice <= 30000)
             .toList();
       } else if (budgetRange == 'Above 30k') {
-        filteredPhotographers = filteredPhotographers
-            .where((p) => p['budget'] > 30000)
+        filteredVendorCards = filteredVendorCards
+            .where((card) => card.discountedPrice > 30000)
             .toList();
       }
 
       // Sort
-      if (sortBy == 'Rating') {
-        filteredPhotographers.sort((a, b) => b['rating'].compareTo(a['rating']));
-      } else if (sortBy == 'Price: Low to High') {
-        filteredPhotographers.sort((a, b) => a['budget'].compareTo(b['budget']));
+      if (sortBy == 'Price: Low to High') {
+        filteredVendorCards.sort((a, b) => a.discountedPrice.compareTo(b.discountedPrice));
       } else if (sortBy == 'Price: High to Low') {
-        filteredPhotographers.sort((a, b) => b['budget'].compareTo(a['budget']));
-      } else if (sortBy == 'Reviews') {
-        filteredPhotographers.sort((a, b) => b['reviewCount'].compareTo(a['reviewCount']));
+        filteredVendorCards.sort((a, b) => b.discountedPrice.compareTo(a.discountedPrice));
+      } else if (sortBy == 'Discount') {
+        filteredVendorCards.sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
       }
     });
   }
@@ -191,10 +219,9 @@ class _PhotographyPageState extends State<PhotographyPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildSortOption('Rating'),
             _buildSortOption('Price: Low to High'),
             _buildSortOption('Price: High to Low'),
-            _buildSortOption('Reviews'),
+            _buildSortOption('Discount'),
           ],
         ),
       ),
@@ -353,16 +380,14 @@ class _PhotographyPageState extends State<PhotographyPage> {
             color: Color(0xff0c1c2c),
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildCityOption('All'),
-            _buildCityOption('Mumbai'),
-            _buildCityOption('Delhi'),
-            _buildCityOption('Bangalore'),
-            _buildCityOption('Pune'),
-            _buildCityOption('Hyderabad'),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildCityOption('All'),
+              ...availableCities.map((city) => _buildCityOption(city)),
+            ],
+          ),
         ),
       ),
     );
@@ -401,7 +426,50 @@ class _PhotographyPageState extends State<PhotographyPage> {
         ),
         elevation: 0,
       ),
-      body: Column(
+      body: isLoading
+          ? Center(child: CircularProgressIndicator(color: Color(0xff0c1c2c)))
+          : errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                      SizedBox(height: 16),
+                      Text(
+                        'Error loading vendors',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 32),
+                        child: Text(
+                          errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.urbanist(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadVendorCards,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xff0c1c2c),
+                        ),
+                        child: Text(
+                          'Retry',
+                          style: GoogleFonts.urbanist(color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Column(
         children: [
           // Filter chips
           Container(
@@ -447,7 +515,7 @@ class _PhotographyPageState extends State<PhotographyPage> {
             child: Row(
               children: [
                 Text(
-                  '${filteredPhotographers.length} vendors found',
+                  '${filteredVendorCards.length} vendors found',
                   style: GoogleFonts.urbanist(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -460,7 +528,7 @@ class _PhotographyPageState extends State<PhotographyPage> {
 
           // Vendor list
           Expanded(
-            child: filteredPhotographers.isEmpty
+            child: filteredVendorCards.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -488,19 +556,21 @@ class _PhotographyPageState extends State<PhotographyPage> {
                   )
                 : ListView.builder(
                     padding: EdgeInsets.only(top: 8, bottom: 16),
-                    itemCount: filteredPhotographers.length,
+                    itemCount: filteredVendorCards.length,
                     itemBuilder: (context, index) {
-                      final photographer = filteredPhotographers[index];
+                      final card = filteredVendorCards[index];
                       return VendorTile(
-                        studioName: photographer['studioName'] ?? '',
-                        serviceType: photographer['serviceType'] ?? '',
-                        rating: photographer['rating'] ?? 0.0,
-                        reviewCount: photographer['reviewCount'] ?? 0,
-                        startingPrice: photographer['startingPrice'] ?? '0',
-                        imageFileName: photographer['imageFileName'] ?? '',
-                        location: photographer['location'] ?? 'Mumbai',
-                        serviceTags: List<String>.from(photographer['serviceTags'] ?? []),
-                        qualityTags: List<String>.from(photographer['qualityTags'] ?? []),
+                        studioName: card.studioName,
+                        serviceType: card.serviceTags.isNotEmpty ? card.serviceTags.first : '',
+                        rating: 4.5, // Default since we don't have rating in vendor_cards yet
+                        reviewCount: 0, // Default
+                        startingPrice: card.formattedDiscountedPrice,
+                        originalPrice: card.formattedOriginalPrice,
+                        discountPercent: card.discountPercent,
+                        imageFileName: card.imagePath,
+                        location: card.city,
+                        serviceTags: card.serviceTags,
+                        qualityTags: card.qualityTags,
                         onViewProfile: () {
                           showDialog(
                             context: context,

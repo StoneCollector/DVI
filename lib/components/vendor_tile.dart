@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:dreamventz/services/vendor_card_service.dart';
 
 class VendorTile extends StatefulWidget {
   final String studioName;
@@ -8,6 +8,8 @@ class VendorTile extends StatefulWidget {
   final double rating;
   final int reviewCount;
   final String startingPrice;
+  final String? originalPrice;
+  final int? discountPercent;
   final String imageFileName;
   final String location;
   final List<String> serviceTags;
@@ -21,6 +23,8 @@ class VendorTile extends StatefulWidget {
     required this.rating,
     required this.reviewCount,
     required this.startingPrice,
+    this.originalPrice,
+    this.discountPercent,
     required this.imageFileName,
     required this.location,
     required this.serviceTags,
@@ -63,7 +67,7 @@ class _VendorTileState extends State<VendorTile> {
                   topRight: Radius.circular(12),
                 ),
                 child: Image.network(
-                  SupabaseConfig.getImageUrl(widget.imageFileName),
+                  VendorCardService.getImageUrl(widget.imageFileName),
                   width: double.infinity,
                   height: 200,
                   fit: BoxFit.cover,
@@ -213,39 +217,43 @@ class _VendorTileState extends State<VendorTile> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                '₹${widget.startingPrice}',
+                                widget.startingPrice,
                                 style: GoogleFonts.urbanist(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.pink[700],
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Text(
-                                '₹${(double.parse(widget.startingPrice.replaceAll(',', '')) / 0.7).toStringAsFixed(0)}',
-                                style: GoogleFonts.urbanist(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
-                                  decoration: TextDecoration.lineThrough,
-                                  decorationThickness: 2,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.pink[700],
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '30% OFF',
+                              if (widget.originalPrice != null) ...[
+                                SizedBox(width: 8),
+                                Text(
+                                  widget.originalPrice!,
                                   style: GoogleFonts.urbanist(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                    decoration: TextDecoration.lineThrough,
+                                    decorationThickness: 2,
                                   ),
                                 ),
-                              ),
+                              ],
+                              if (widget.discountPercent != null && widget.discountPercent! > 0) ...[
+                                SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.pink[700],
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${widget.discountPercent}% OFF',
+                                    style: GoogleFonts.urbanist(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ],

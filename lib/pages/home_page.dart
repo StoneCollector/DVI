@@ -435,6 +435,7 @@ class _HomePageState extends State<HomePage>
                               MaterialPageRoute(
                                 builder: (context) => VendorDetailsPage(
                                   categoryName: 'Photography',
+                                  categoryId: 1,
                                 ),
                               ),
                             );
@@ -457,7 +458,7 @@ class _HomePageState extends State<HomePage>
                         SizedBox(width: 10),
                         ServicesTile(
                           icon: Icons.music_note,
-                          label: "       Music       ",
+                          label: "   DJ & Bands   ",
                           onTap: () {
                             Navigator.push(
                               context,
@@ -471,7 +472,7 @@ class _HomePageState extends State<HomePage>
                         SizedBox(width: 10),
                         ServicesTile(
                           icon: Icons.star,
-                          label: "   Decoration   ",
+                          label: "   Decoraters   ",
                           onTap: () {
                             Navigator.push(
                               context,
@@ -485,8 +486,8 @@ class _HomePageState extends State<HomePage>
                         ),
                         SizedBox(width: 10),
                         ServicesTile(
-                          icon: Icons.local_shipping,
-                          label: "     Logistics     ",
+                          icon: Icons.brush,
+                          label: "  Mehndi Artist  ",
                           onTap: () {
                             Navigator.push(
                               context,
