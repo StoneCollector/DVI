@@ -86,6 +86,9 @@ class _VendorCategoriesPageState extends State<VendorCategoriesPage> {
                         MaterialPageRoute(
                           builder: (context) => VendorDetailsPage(
                             categoryName: category['name'] ?? '',
+                            categoryId: (category['id'] ?? 0) is int
+                                ? category['id'] as int
+                                : int.tryParse('${category['id'] ?? 0}') ?? 0,
                           ),
                         ),
                       );

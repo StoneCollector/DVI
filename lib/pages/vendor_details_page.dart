@@ -5,8 +5,12 @@ import 'package:dreamventz/pages/vendor_profile_page.dart';
 
 class VendorDetailsPage extends StatefulWidget {
   final String categoryName;
-
-  const VendorDetailsPage({super.key, required this.categoryName});
+  final int categoryId;
+  const VendorDetailsPage({
+    super.key,
+    required this.categoryName,
+    required this.categoryId,
+  });
 
   @override
   State<VendorDetailsPage> createState() => _VendorDetailsPageState();

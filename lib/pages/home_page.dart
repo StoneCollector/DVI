@@ -6,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/carasol.dart';
 import 'package:dreamventz/components/services_tile.dart';
 import 'package:dreamventz/components/trending_tile.dart';
-import 'package:dreamventz/pages/photography_page.dart';
 import 'package:dreamventz/pages/vendor_details_page.dart';
 import 'package:dreamventz/pages/user_profile_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -449,8 +448,10 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    VendorDetailsPage(categoryName: 'Catering'),
+                                builder: (context) => VendorDetailsPage(
+                                  categoryName: 'Catering',
+                                  categoryId: 2,
+                                ),
                               ),
                             );
                           },
@@ -463,8 +464,10 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    VendorDetailsPage(categoryName: 'Music'),
+                                builder: (context) => VendorDetailsPage(
+                                  categoryName: 'Music',
+                                  categoryId: 3,
+                                ),
                               ),
                             );
                           },
@@ -479,6 +482,7 @@ class _HomePageState extends State<HomePage>
                               MaterialPageRoute(
                                 builder: (context) => VendorDetailsPage(
                                   categoryName: 'Decoration',
+                                  categoryId: 4,
                                 ),
                               ),
                             );
@@ -494,6 +498,7 @@ class _HomePageState extends State<HomePage>
                               MaterialPageRoute(
                                 builder: (context) => VendorDetailsPage(
                                   categoryName: 'Logistics',
+                                  categoryId: 5,
                                 ),
                               ),
                             );
