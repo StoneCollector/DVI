@@ -23,19 +23,33 @@ class SupabaseConfig {
       final supabaseUrl = dotenv.env['SUPABASE_URL'];
       final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
 
+      // If credentials are missing or empty, log warning but allow app to continue
       if (supabaseUrl == null || supabaseAnonKey == null) {
-        throw Exception(
-          'Supabase credentials not found in .env file. '
-          'Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set.',
+        debugPrint(
+          '⚠️  Supabase credentials not found in .env file. '
+          'Some features may not work. Please ensure SUPABASE_URL and SUPABASE_ANON_KEY are set.',
         );
+        _initialized = true; // Mark as initialized to allow UI to render
+        return;
+      }
+
+      if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+        debugPrint(
+          '⚠️  Supabase credentials are empty in .env file. '
+          'Some features may not work. Please set SUPABASE_URL and SUPABASE_ANON_KEY.',
+        );
+        _initialized = true; // Mark as initialized to allow UI to render
+        return;
       }
 
       if (supabaseUrl.contains('your_supabase') ||
           supabaseAnonKey.contains('your_supabase')) {
-        throw Exception(
-          'Please replace the placeholder Supabase credentials in .env file '
-          'with your actual project credentials from https://app.supabase.com',
+        debugPrint(
+          '⚠️  Placeholder Supabase credentials detected. '
+          'Please replace them with your actual project credentials from https://app.supabase.com',
         );
+        _initialized = true; // Mark as initialized to allow UI to render
+        return;
       }
 
       // Initialize Supabase
@@ -51,8 +65,9 @@ class SupabaseConfig {
       _initialized = true;
       debugPrint('✅ Supabase initialized successfully');
     } catch (e) {
-      debugPrint('❌ Supabase initialization failed: $e');
-      rethrow;
+      debugPrint('❌ Supabase initialization error: $e');
+      // Mark as initialized anyway to allow app to continue
+      _initialized = true;
     }
   }
 
@@ -71,8 +86,25 @@ class SupabaseConfig {
   static bool get isInitialized => _initialized;
 
   /// Get current auth state
-  static User? get currentUser => client.auth.currentUser;
+  static User? get currentUser {
+    try {
+      if (!_initialized) {
+        return null;
+      }
+      return Supabase.instance.client.auth.currentUser;
+    } catch (e) {
+      debugPrint('Error getting current user: $e');
+      return null;
+    }
+  }
 
   /// Check if user is authenticated
-  static bool get isAuthenticated => currentUser != null;
+  static bool get isAuthenticated {
+    try {
+      return currentUser != null;
+    } catch (e) {
+      debugPrint('Error checking authentication: $e');
+      return false;
+    }
+  }
 }

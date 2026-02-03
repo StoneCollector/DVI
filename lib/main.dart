@@ -96,11 +96,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     // Navigate based on auth state
     // If user is authenticated, go to home, otherwise login
-    if (SupabaseConfig.isAuthenticated) {
-      return const MainNavigation();
-    } else {
-      return const WelcomePage();
+    // Use try-catch to handle potential Supabase initialization failures
+    try {
+      if (SupabaseConfig.isAuthenticated) {
+        return const MainNavigation();
+      }
+    } catch (e) {
+      debugPrint('Error checking auth state: $e');
     }
+
+    return const WelcomePage();
   }
 }
 
