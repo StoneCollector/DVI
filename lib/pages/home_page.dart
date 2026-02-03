@@ -8,6 +8,7 @@ import 'package:dreamventz/components/services_tile.dart';
 import 'package:dreamventz/components/trending_tile.dart';
 import 'package:dreamventz/components/venue_category_tile.dart';
 import 'package:dreamventz/pages/photography_page.dart';
+import 'package:dreamventz/pages/vendor_details_page.dart';
 import 'package:dreamventz/pages/user_profile_page.dart';
 import 'package:dreamventz/pages/venue_detail_page.dart';
 import 'package:dreamventz/pages/venue_category_list_page.dart';
@@ -461,8 +462,9 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PhotographyPage(
+                                builder: (context) => VendorDetailsPage(
                                   categoryName: 'Photography',
+                                  categoryId: 1,
                                 ),
                               ),
                             );
@@ -471,13 +473,13 @@ class _HomePageState extends State<HomePage>
                         const SizedBox(width: 10),
                         ServicesTile(
                           icon: Icons.restaurant,
-                          label: "    Catering    ",
+                          label: "Catering",
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    PhotographyPage(categoryName: 'Catering'),
+                                    VendorDetailsPage(categoryName: 'Catering'),
                               ),
                             );
                           },
@@ -485,13 +487,13 @@ class _HomePageState extends State<HomePage>
                         const SizedBox(width: 10),
                         ServicesTile(
                           icon: Icons.music_note,
-                          label: "       Music       ",
+                          label: "   DJ & Bands   ",
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    PhotographyPage(categoryName: 'Music'),
+                                    VendorDetailsPage(categoryName: 'Music'),
                               ),
                             );
                           },
@@ -499,27 +501,29 @@ class _HomePageState extends State<HomePage>
                         const SizedBox(width: 10),
                         ServicesTile(
                           icon: Icons.star,
-                          label: "   Decoration   ",
+                          label: "   Decoraters   ",
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    PhotographyPage(categoryName: 'Decoration'),
+                                builder: (context) => VendorDetailsPage(
+                                  categoryName: 'Decoration',
+                                ),
                               ),
                             );
                           },
                         ),
                         const SizedBox(width: 10),
                         ServicesTile(
-                          icon: Icons.local_shipping,
-                          label: "     Logistics     ",
+                          icon: Icons.brush,
+                          label: "  Mehndi Artist  ",
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) =>
-                                    PhotographyPage(categoryName: 'Logistics'),
+                                builder: (context) => VendorDetailsPage(
+                                  categoryName: 'Logistics',
+                                ),
                               ),
                             );
                           },
