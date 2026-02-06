@@ -9,7 +9,17 @@ import '../utils/constants.dart';
 /// Authentication service for user authentication operations
 /// Handles login, signup, password reset, and session management
 class AuthService {
-  final SupabaseClient _supabase = SupabaseConfig.client;
+  late final SupabaseClient _supabase;
+
+  AuthService() {
+    // Initialize lazily to avoid errors during app startup
+    try {
+      _supabase = SupabaseConfig.client;
+    } catch (e) {
+      debugPrint('⚠️  Supabase not available in AuthService: $e');
+      // Will fail when actually used, but won't crash during initialization
+    }
+  }
 
   /// Sign up a new user
   /// Password is automatically hashed by Supabase (bcrypt) - never transmitted in plain text

@@ -8,6 +8,11 @@ class VendorProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dynamic image URL from Supabase storage bucket
+    // Replace 'carasol' with your actual bucket name if it differs
+    final String imageUrl =
+        "https://zyozigpldjruomhqaqjy.supabase.co/storage/v1/object/public/carasol/${vendorData['image_path']}";
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -19,7 +24,7 @@ class VendorProfilePage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          vendorData['studioName'] ?? 'Vendor Profile',
+          vendorData['studio_name'] ?? 'Vendor Profile',
           style: GoogleFonts.urbanist(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -30,14 +35,18 @@ class VendorProfilePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Vendor Image Section
+            // 1. Vendor Image Section (Updated to handle Supabase Network Images)
             Container(
               height: 250,
               width: double.infinity,
               decoration: BoxDecoration(color: Colors.grey[200]),
-              child: Image.asset(
-                'assets/images/${vendorData['imageFileName']}',
+              child: Image.network(
+                imageUrl,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(child: CircularProgressIndicator());
+                },
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     color: Colors.grey[300],
@@ -60,7 +69,7 @@ class VendorProfilePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    vendorData['studioName'] ?? '',
+                    vendorData['studio_name'] ?? 'Vendor Profile',
                     style: GoogleFonts.urbanist(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -77,7 +86,7 @@ class VendorProfilePage extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        vendorData['location'] ?? 'Location not specified',
+                        vendorData['city'] ?? 'Location not specified',
                         style: GoogleFonts.urbanist(
                           fontSize: 16,
                           color: Colors.grey[700],
@@ -91,7 +100,8 @@ class VendorProfilePage extends StatelessWidget {
                       const Icon(Icons.star, size: 18, color: Colors.amber),
                       const SizedBox(width: 4),
                       Text(
-                        "${vendorData['rating'] ?? '0.0'} (${vendorData['reviewCount'] ?? '0'} reviews)",
+                        // Defaulting to 4.5 if rating is not in the vendor_cards table
+                        "${vendorData['rating'] ?? '4.5'} (${vendorData['reviewCount'] ?? '0'} reviews)",
                         style: GoogleFonts.urbanist(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -115,35 +125,31 @@ class VendorProfilePage extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: (vendorData['serviceTags'] as List<String>? ?? [])
-                        .map(
-                          (tag) => Chip(
-                            label: Text(
-                              tag,
-                              style: GoogleFonts.urbanist(fontSize: 13),
-                            ),
-                            backgroundColor: Colors.grey[100],
-                            side: BorderSide.none,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        )
-                        .toList(),
+                    children:
+                        (vendorData['service_tags'] as List<dynamic>? ?? [])
+                            .map(
+                              (tag) => Chip(
+                                label: Text(
+                                  tag.toString(),
+                                  style: GoogleFonts.urbanist(fontSize: 13),
+                                ),
+                                backgroundColor: Colors.grey[100],
+                                side: BorderSide.none,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                            )
+                            .toList(),
                   ),
                   const Divider(height: 40),
 
                   _buildSectionTitle("Service Information"),
                   const SizedBox(height: 10),
                   _buildInfoRow(
-                    Icons.category_outlined,
-                    "Service Type",
-                    vendorData['serviceType'],
-                  ),
-                  _buildInfoRow(
                     Icons.place_outlined,
                     "City",
-                    vendorData['location'],
+                    vendorData['city'],
                   ),
 
                   const Divider(height: 40),
@@ -157,20 +163,48 @@ class VendorProfilePage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey[200]!),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
-                        Text(
-                          "Starting from",
-                          style: GoogleFonts.urbanist(fontSize: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Original Price",
+                              style: GoogleFonts.urbanist(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            Text(
+                              "₹ ${vendorData['original_price'] ?? '0'}",
+                              style: GoogleFonts.urbanist(
+                                fontSize: 18,
+                                decoration: TextDecoration.lineThrough,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          "₹ ${vendorData['startingPrice']}",
-                          style: GoogleFonts.urbanist(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.pink,
-                          ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Discounted Price",
+                              style: GoogleFonts.urbanist(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              "₹ ${vendorData['discounted_price'] ?? '0'}",
+                              style: GoogleFonts.urbanist(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.pink,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -180,7 +214,7 @@ class VendorProfilePage extends StatelessWidget {
                   _buildSectionTitle("About Us"),
                   const SizedBox(height: 8),
                   Text(
-                    "This is a professional service provider specializing in ${vendorData['serviceType']}. Known for ${vendorData['qualityTags']?.join(', ') ?? 'quality service'}, they ensure your event is memorable and perfectly captured.",
+                    "Professional services located in ${vendorData['city'] ?? 'your city'}. We specialize in high-quality event experiences to make your celebration memorable.",
                     style: GoogleFonts.urbanist(
                       fontSize: 15,
                       height: 1.5,
@@ -194,8 +228,6 @@ class VendorProfilePage extends StatelessWidget {
           ],
         ),
       ),
-
-      // 4. Sticky Bottom Action Bar
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -208,31 +240,23 @@ class VendorProfilePage extends StatelessWidget {
             ),
           ],
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  // Handle Availability Check
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pink,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                child: Text(
-                  "Check Availability",
-                  style: GoogleFonts.urbanist(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
+        child: ElevatedButton(
+          onPressed: () {},
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xff0c1c2c),
+            padding: const EdgeInsets.symmetric(vertical: 15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
-          ],
+          ),
+          child: Text(
+            "Check Availability",
+            style: GoogleFonts.urbanist(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
         ),
       ),
     );
