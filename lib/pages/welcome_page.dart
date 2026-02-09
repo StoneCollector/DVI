@@ -35,7 +35,7 @@ class WelcomePage extends StatelessWidget {
                   "Crafting Your Dream Events",
                   style: GoogleFonts.urbanist(
                     fontSize: 24,
-                    color: const Color(0xff0c1c2c),
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -45,7 +45,7 @@ class WelcomePage extends StatelessWidget {
                   style: GoogleFonts.urbanist(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: const Color.fromARGB(192, 12, 28, 44),
+                    color: Colors.white,
                   ),
                 ),
               ],

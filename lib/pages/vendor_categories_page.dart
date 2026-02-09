@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/vendor_category_tile.dart';
-import 'package:dreamventz/pages/vendor_details_page.dart';
+import 'package:dreamventz/pages/vendor_list_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VendorCategoriesPage extends StatefulWidget {
@@ -84,7 +84,7 @@ class _VendorCategoriesPageState extends State<VendorCategoriesPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => VendorDetailsPage(
+                          builder: (context) => VendorListPage(
                             categoryName: category['name'] ?? '',
                             categoryId: (category['id'] ?? 0) is int
                                 ? category['id'] as int

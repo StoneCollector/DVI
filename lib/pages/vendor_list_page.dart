@@ -3,22 +3,23 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/vendor_tile.dart';
 import 'package:dreamventz/models/vendor_card.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
+import 'package:dreamventz/pages/vendor_profile_page.dart';
 
-class PhotographyPage extends StatefulWidget {
+class VendorListPage extends StatefulWidget {
   final String categoryName;
   final int categoryId;
 
-  const PhotographyPage({
+  const VendorListPage({
     super.key, 
     required this.categoryName,
     required this.categoryId,
   });
 
   @override
-  State<PhotographyPage> createState() => _PhotographyPageState();
+  State<VendorListPage> createState() => _VendorListPageState();
 }
 
-class _PhotographyPageState extends State<PhotographyPage> {
+class _VendorListPageState extends State<VendorListPage> {
 
   // Data from Supabase
   List<VendorCard> allVendorCards = [];
@@ -26,99 +27,19 @@ class _PhotographyPageState extends State<PhotographyPage> {
   bool isLoading = true;
   String? errorMessage;
 
-  // Static data for photographers (BACKUP - will be replaced by Supabase data)
-  List<Map<String, dynamic>> allPhotographers = [
-    {
-      'studioName': 'Raj Photo Studio',
-      'serviceType': 'Wedding Photography',
-      'rating': 4.8,
-      'reviewCount': 320,
-      'startingPrice': '25,000',
-      'imageFileName': 'hero7.jpg',
-      'preWedding': true,
-      'budget': 25000,
-      'location': 'Mumbai',
-      'serviceTags': ['Wedding Photographer', 'Editing'],
-      'qualityTags': ['Quality Service'],
-    },
-    {
-      'studioName': 'Creative Frame Studio',
-      'serviceType': 'Pre-wedding & Wedding Photography',
-      'rating': 4.9,
-      'reviewCount': 215,
-      'startingPrice': '18,000',
-      'imageFileName': 'hero2.jpg',
-      'preWedding': true,
-      'budget': 18000,
-      'location': 'Delhi',
-      'serviceTags': ['Pre-wedding', 'Videography'],
-      'qualityTags': ['Customizable'],
-    },
-    {
-      'studioName': 'SnapSutra',
-      'serviceType': 'Candid Photography',
-      'rating': 4.9,
-      'reviewCount': 180,
-      'startingPrice': '30,000',
-      'imageFileName': 'hero3.jpg',
-      'preWedding': true,
-      'budget': 30000,
-      'location': 'Bangalore',
-      'serviceTags': ['Candid Photography', 'Editing'],
-      'qualityTags': ['Experienced'],
-    },
-    {
-      'studioName': 'Pixel Perfect Photos',
-      'serviceType': 'Wedding Photography',
-      'rating': 4.7,
-      'reviewCount': 275,
-      'startingPrice': '28,000',
-      'imageFileName': 'hero4.jpg',
-      'preWedding': true,
-      'budget': 28000,
-      'location': 'Mumbai',
-      'serviceTags': ['Wedding Photographer', 'Traditional Photography'],
-      'qualityTags': ['Customizable'],
-    },
-    {
-      'studioName': 'Moments Capture',
-      'serviceType': 'Cinematic Photography',
-      'rating': 4.6,
-      'reviewCount': 156,
-      'startingPrice': '22,000',
-      'imageFileName': 'hero5.jpg',
-      'preWedding': false,
-      'budget': 22000,
-      'location': 'Pune',
-      'serviceTags': ['Cinematic Photography', 'Videography'],
-      'qualityTags': ['Experienced'],
-    },
-    {
-      'studioName': 'Dream Lens Studios',
-      'serviceType': 'Traditional & Candid',
-      'rating': 4.8,
-      'reviewCount': 298,
-      'startingPrice': '35,000',
-      'imageFileName': 'hero6.jpg',
-      'preWedding': true,
-      'budget': 35000,
-      'location': 'Hyderabad',
-      'serviceTags': ['Traditional Photography', 'Pre-wedding'],
-      'qualityTags': ['Quality Service'],
-    },
-  ];
-
-  List<Map<String, dynamic>> filteredPhotographers = [];
-
   // Filter states
   String sortBy = 'Rating';
-  bool preWeddingOnly = false;
   String budgetRange = 'All';
   String selectedCity = 'All';
   
   // Service tags filter
   List<String> selectedServiceTags = [];
   List<String> availableServiceTags = [];
+  
+  // Quality tags filter
+  List<String> selectedQualityTags = [];
+  List<String> availableQualityTags = [];
+  
   List<String> availableCities = [];
 
   @override
@@ -142,6 +63,7 @@ class _PhotographyPageState extends State<PhotographyPage> {
       // Fetch cities and tags
       availableCities = await service.getUniqueCities(widget.categoryId);
       availableServiceTags = await service.getAllServiceTags(widget.categoryId);
+      availableQualityTags = await service.getAllQualityTags(widget.categoryId);
       
       setState(() {
         filteredVendorCards = List.from(allVendorCards);
@@ -169,11 +91,19 @@ class _PhotographyPageState extends State<PhotographyPage> {
       // Service tags filter
       if (selectedServiceTags.isNotEmpty) {
         filteredVendorCards = filteredVendorCards.where((card) {
-          // Combine both service and quality tags
-          List<String> allTags = [...card.serviceTags, ...card.qualityTags];
-          // Check if ALL selected tags are present in the card's tags (AND logic)
+          // Check if ALL selected service tags are present (AND logic)
           return selectedServiceTags.every((selectedTag) => 
-            allTags.contains(selectedTag)
+            card.serviceTags.contains(selectedTag)
+          );
+        }).toList();
+      }
+
+      // Quality tags filter
+      if (selectedQualityTags.isNotEmpty) {
+        filteredVendorCards = filteredVendorCards.where((card) {
+          // Check if ALL selected quality tags are present (AND logic)
+          return selectedQualityTags.every((selectedTag) => 
+            card.qualityTags.contains(selectedTag)
           );
         }).toList();
       }
@@ -368,6 +298,83 @@ class _PhotographyPageState extends State<PhotographyPage> {
     );
   }
 
+  void _showQualityTagsDialog() {
+    // Create a local copy of selected tags for the dialog
+    List<String> tempSelectedTags = List.from(selectedQualityTags);
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            title: Text(
+              'Quality Tags',
+              style: GoogleFonts.urbanist(
+                fontWeight: FontWeight.bold,
+                color: Color(0xff0c1c2c),
+              ),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: availableQualityTags.map((tag) {
+                  return CheckboxListTile(
+                    title: Text(
+                      tag,
+                      style: GoogleFonts.urbanist(color: Color(0xff0c1c2c)),
+                    ),
+                    value: tempSelectedTags.contains(tag),
+                    activeColor: Color(0xff0c1c2c),
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        if (value == true) {
+                          tempSelectedTags.add(tag);
+                        } else {
+                          tempSelectedTags.remove(tag);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.urbanist(
+                    color: Colors.grey[600],
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    selectedQualityTags = tempSelectedTags;
+                  });
+                  Navigator.pop(context);
+                  _applyFilters();
+                },
+                child: Text(
+                  'OK',
+                  style: GoogleFonts.urbanist(
+                    color: Color(0xff0c1c2c),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _showCityDialog() {
     showDialog(
       context: context,
@@ -473,8 +480,9 @@ class _PhotographyPageState extends State<PhotographyPage> {
         children: [
           // Filter chips
           Container(
+            width: double.infinity,
             color: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -499,6 +507,13 @@ class _PhotographyPageState extends State<PhotographyPage> {
                   ),
                   SizedBox(width: 8),
                   _buildFilterChip(
+                    label: 'Quality',
+                    icon: Icons.verified,
+                    isSelected: selectedQualityTags.isNotEmpty,
+                    onTap: _showQualityTagsDialog,
+                  ),
+                  SizedBox(width: 8),
+                  _buildFilterChip(
                     label: 'Budget',
                     icon: Icons.currency_rupee,
                     onTap: _showBudgetDialog,
@@ -511,7 +526,7 @@ class _PhotographyPageState extends State<PhotographyPage> {
           // Results count
           Container(
             color: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 4),
             child: Row(
               children: [
                 Text(
@@ -572,38 +587,24 @@ class _PhotographyPageState extends State<PhotographyPage> {
                         serviceTags: card.serviceTags,
                         qualityTags: card.qualityTags,
                         onViewProfile: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                backgroundColor: Colors.white,
-                                title: Text(
-                                  'Coming Soon',
-                                  style: GoogleFonts.urbanist(
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xff0c1c2c),
-                                  ),
-                                ),
-                                content: Text(
-                                  'Vendor profile details will be available soon!',
-                                  style: GoogleFonts.urbanist(
-                                    color: Color(0xff0c1c2c),
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: Text(
-                                      'OK',
-                                      style: GoogleFonts.urbanist(
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xff0c1c2c),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                          // Convert VendorCard to Map format for VendorProfilePage
+                          final vendorData = {
+                            'studio_name': card.studioName,
+                            'city': card.city,
+                            'image_path': card.imagePath,
+                            'service_tags': card.serviceTags,
+                            'quality_tags': card.qualityTags,
+                            'original_price': card.originalPrice,
+                            'discounted_price': card.discountedPrice,
+                            'rating': 4.5,
+                            'reviewCount': 0,
+                          };
+                          
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => VendorProfilePage(vendorData: vendorData),
+                            ),
                           );
                         },
                       );

@@ -66,6 +66,29 @@ class VendorCardService {
     }
   }
 
+  // Get all unique quality tags for a category
+  Future<List<String>> getAllQualityTags(int categoryId) async {
+    try {
+      final response = await _supabase
+          .from('vendor_cards')
+          .select('quality_tags')
+          .eq('category_id', categoryId);
+
+      final Set<String> allTags = {};
+      for (var item in response as List) {
+        final tags = List<String>.from(item['quality_tags'] ?? []);
+        allTags.addAll(tags);
+      }
+      
+      final tagList = allTags.toList();
+      tagList.sort();
+      return tagList;
+    } catch (e) {
+      print('Error fetching quality tags: $e');
+      return [];
+    }
+  }
+
   // Get full image URL from storage
   static String getImageUrl(String imagePath) {
     return '${SupabaseConfig.projectUrl}/storage/v1/object/public/${SupabaseConfig.vendorImagesBucket}/$imagePath';

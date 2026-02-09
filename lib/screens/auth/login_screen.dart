@@ -110,6 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -169,11 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
             // Main Content
             SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.only(
+                physics: const ClampingScrollPhysics(),
+                padding: EdgeInsets.only(
                   left: 24,
                   right: 24,
-                  top: 80,
-                  bottom: 30,
+                  top: 40,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 30,
                 ),
                 child: Form(
                   key: _formKey,

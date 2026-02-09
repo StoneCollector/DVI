@@ -181,24 +181,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: const [
                     ServicesTile(
                       icon: Icons.camera_alt,
-                      label: " Photography ",
+                      label: "Photography",
                     ),
                     SizedBox(width: 10),
                     ServicesTile(
                       icon: Icons.restaurant,
-                      label: "     Catering     ",
+                      label: "Catering",
                     ),
                     SizedBox(width: 10),
                     ServicesTile(
                       icon: Icons.music_note,
-                      label: "       Music       ",
+                      label: "Music",
                     ),
                     SizedBox(width: 10),
-                    ServicesTile(icon: Icons.star, label: "   Decoration   "),
+                    ServicesTile(icon: Icons.star, label: "Decoration"),
                     SizedBox(width: 10),
                     ServicesTile(
                       icon: Icons.local_shipping,
-                      label: "     Logistics     ",
+                      label: "Logistics",
                     ),
                     SizedBox(width: 10),
                   ],

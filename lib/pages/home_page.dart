@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/carasol.dart';
 import 'package:dreamventz/components/services_tile.dart';
 import 'package:dreamventz/components/trending_tile.dart';
-import 'package:dreamventz/pages/vendor_details_page.dart';
+import 'package:dreamventz/pages/vendor_list_page.dart';
 import 'package:dreamventz/pages/user_profile_page.dart';
 import 'package:dreamventz/pages/venue_detail_page.dart';
 import 'package:dreamventz/pages/all_venues_page.dart';
@@ -459,7 +459,7 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VendorDetailsPage(
+                                builder: (context) => VendorListPage(
                                   categoryName: 'Photography',
                                   categoryId: 1,
                                 ),
@@ -470,14 +470,14 @@ class _HomePageState extends State<HomePage>
                         const SizedBox(width: 10),
                         ServicesTile(
                           icon: Icons.restaurant,
-                          label: "Catering",
+                          label: "  Catering  ",
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VendorDetailsPage(
-                                  categoryName: 'Catering',
-                                  categoryId: 2,
+                                builder: (context) => VendorListPage(
+                                  categoryName: 'Caterers',
+                                  categoryId: 4,
                                 ),
                               ),
                             );
@@ -491,9 +491,9 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VendorDetailsPage(
-                                  categoryName: 'Music',
-                                  categoryId: 3,
+                                builder: (context) => VendorListPage(
+                                  categoryName: 'DJ & Bands',
+                                  categoryId: 5,
                                 ),
                               ),
                             );
@@ -507,9 +507,9 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VendorDetailsPage(
-                                  categoryName: 'Decoration',
-                                  categoryId: 4,
+                                builder: (context) => VendorListPage(
+                                  categoryName: 'Decoraters',
+                                  categoryId: 6,
                                 ),
                               ),
                             );
@@ -523,9 +523,9 @@ class _HomePageState extends State<HomePage>
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => VendorDetailsPage(
-                                  categoryName: 'Logistics',
-                                  categoryId: 5,
+                                builder: (context) => VendorListPage(
+                                  categoryName: 'Mehndi Artist',
+                                  categoryId: 2,
                                 ),
                               ),
                             );
@@ -538,9 +538,41 @@ class _HomePageState extends State<HomePage>
                 ],
               ),
 
-              const SizedBox(height: 20),
-
               SizedBox(height: 20),
+
+              //customize package banner
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/customize_package_page');
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 8,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                       borderRadius: BorderRadius.circular(15.0),
+                      child: Image.asset(
+                        'lib/images/customize.png',
+                        width: double.infinity,
+                        height: 120,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 15),
 
               // Expandable Venues by Category Section
               _buildVenuesSection(),
@@ -656,7 +688,7 @@ class _HomePageState extends State<HomePage>
       children: [
         // Section Header with Catchy Phrase and Decorated Button
         Padding(
-          padding: const EdgeInsets.only(left: 15.0, bottom: 4, right: 15.0),
+          padding: const EdgeInsets.only(left: 15.0, right: 15.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -691,7 +723,7 @@ class _HomePageState extends State<HomePage>
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
-                    vertical: 10,
+                    vertical: 8,
                   ),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -739,8 +771,6 @@ class _HomePageState extends State<HomePage>
             ],
           ),
         ),
-
-        const SizedBox(height: 12),
 
         // Popular Venues Carousel
         SizedBox(

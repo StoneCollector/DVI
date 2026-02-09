@@ -13,6 +13,7 @@ import 'screens/packages/filter_package_list_screen.dart';
 import 'pages/main_navigation.dart';
 import 'pages/vendor_categories_page.dart';
 import 'pages/welcome_page.dart';
+import 'pages/customize_package_page.dart';
 import 'utils/constants.dart';
 
 void main() async {
@@ -54,6 +55,7 @@ class DreamVentzApp extends StatelessWidget {
         '/bookservice': (context) => const BookServiceScreen(),
         '/vendorcategories': (context) => const VendorCategoriesPage(),
         '/packages': (context) => const FilterPackageListScreen(),
+        '/customize_package_page': (context) => const CustomizePackagePage(),
       },
     );
   }
