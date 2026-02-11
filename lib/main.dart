@@ -14,6 +14,7 @@ import 'pages/main_navigation.dart';
 import 'pages/vendor_categories_page.dart';
 import 'pages/welcome_page.dart';
 import 'pages/customize_package_page.dart';
+import 'pages/coordination_service_page.dart';
 import 'utils/constants.dart';
 
 void main() async {
@@ -56,6 +57,7 @@ class DreamVentzApp extends StatelessWidget {
         '/vendorcategories': (context) => const VendorCategoriesPage(),
         '/packages': (context) => const FilterPackageListScreen(),
         '/customize_package_page': (context) => const CustomizePackagePage(),
+        '/coordination_service_page': (context) => const CoordinationServicePage(),
       },
     );
   }

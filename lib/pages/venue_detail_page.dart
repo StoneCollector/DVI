@@ -1,17 +1,53 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/venue_models.dart';
 
 /// Detailed venue page showing all venue information
-class VenueDetailPage extends StatelessWidget {
+class VenueDetailPage extends StatefulWidget {
   final VenueData venue;
 
   const VenueDetailPage({super.key, required this.venue});
 
   @override
+  State<VenueDetailPage> createState() => _VenueDetailPageState();
+}
+
+class _VenueDetailPageState extends State<VenueDetailPage> {
+  int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
+  Timer? _autoScrollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start autoscroll for carousel
+    if (widget.venue.galleryImages.isNotEmpty) {
+      _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        if (_pageController.hasClients) {
+          final nextPage = (_currentImageIndex + 1) % widget.venue.galleryImages.length;
+          _pageController.animateToPage(
+            nextPage,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeInOut,
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Fix dark background issue
+      backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
           // App Bar with Image
@@ -24,13 +60,14 @@ class VenueDetailPage extends StatelessWidget {
               children: [
                 _buildVenueHeader(),
                 _buildLocationSection(),
-                if (venue.description != null && venue.description!.isNotEmpty)
+                _buildVendorContactSection(),
+                if (widget.venue.description != null && widget.venue.description!.isNotEmpty)
                   _buildDescriptionSection(),
-                _buildVendorContactSection(), // Added vendor contact info
-                if (venue.services.isNotEmpty) _buildServicesSection(),
-                if (venue.galleryImages.length > 1) _buildGallerySection(),
-                if (venue.policies != null && venue.policies!.isNotEmpty)
+                if (widget.venue.services.isNotEmpty) _buildServicesSection(),
+                if (widget.venue.galleryImages.length > 1) _buildGallerySection(),
+                if (widget.venue.policies != null && widget.venue.policies!.isNotEmpty)
                   _buildPoliciesSection(),
+                _buildBookingStepsSection(),
                 const SizedBox(height: 100), // Space for bottom button
               ],
             ),
@@ -44,22 +81,109 @@ class VenueDetailPage extends StatelessWidget {
   }
 
   Widget _buildSliverAppBar(BuildContext context) {
+    final hasImages = widget.venue.galleryImages.isNotEmpty;
+
     return SliverAppBar(
-      expandedHeight: 300,
+      expandedHeight: 350,
       pinned: true,
       backgroundColor: const Color(0xff0c1c2c),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
+      leading: Container(
+        margin: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.5),
+          shape: BoxShape.circle,
+        ),
+        child: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       flexibleSpace: FlexibleSpaceBar(
-        background: venue.mainImageUrl != null
-            ? Image.network(
-                venue.mainImageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return _buildPlaceholderImage();
-                },
+        background: hasImages
+            ? Stack(
+                children: [
+                  // Image Carousel
+                  PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentImageIndex = index;
+                      });
+                    },
+                    itemCount: widget.venue.galleryImages.length,
+                    itemBuilder: (context, index) {
+                      return Image.network(
+                        widget.venue.galleryImages[index].imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildPlaceholderImage();
+                        },
+                      );
+                    },
+                  ),
+
+                  // Gradient overlay
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Page indicator
+                  if (widget.venue.galleryImages.length > 1)
+                    Positioned(
+                      bottom: 20,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          widget.venue.galleryImages.length,
+                          (index) => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentImageIndex == index ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _currentImageIndex == index
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Tap to view full screen
+                  Positioned.fill(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => _FullScreenImageViewer(
+                              images: widget.venue.galleryImages,
+                              initialIndex: _currentImageIndex,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               )
             : _buildPlaceholderImage(),
       ),
@@ -91,7 +215,7 @@ class VenueDetailPage extends StatelessWidget {
         children: [
           // Venue Name
           Text(
-            venue.name,
+            widget.venue.name,
             style: GoogleFonts.urbanist(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -101,7 +225,7 @@ class VenueDetailPage extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Category Badge
-          if (venue.category != null)
+          if (widget.venue.category != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -109,7 +233,7 @@ class VenueDetailPage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                venue.category!,
+                widget.venue.category!,
                 style: GoogleFonts.urbanist(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -123,7 +247,7 @@ class VenueDetailPage extends StatelessWidget {
           Row(
             children: [
               // Rating
-              if (venue.rating != null && venue.reviewCount > 0)
+              if (widget.venue.rating != null && widget.venue.reviewCount > 0)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -138,7 +262,7 @@ class VenueDetailPage extends StatelessWidget {
                       const Icon(Icons.star, color: Colors.amber, size: 18),
                       const SizedBox(width: 4),
                       Text(
-                        venue.ratingDisplay,
+                        widget.venue.ratingDisplay,
                         style: GoogleFonts.urbanist(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -146,7 +270,7 @@ class VenueDetailPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        ' (${venue.reviewCount})',
+                        ' (${widget.venue.reviewCount})',
                         style: GoogleFonts.urbanist(
                           fontSize: 12,
                           color: Colors.grey[600],
@@ -159,7 +283,7 @@ class VenueDetailPage extends StatelessWidget {
               const SizedBox(width: 12),
 
               // Guest Capacity
-              if (venue.guestCapacity != null)
+              if (widget.venue.guestCapacity != null)
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
@@ -174,7 +298,7 @@ class VenueDetailPage extends StatelessWidget {
                       const Icon(Icons.people, color: Colors.blue, size: 18),
                       const SizedBox(width: 4),
                       Text(
-                        '${venue.guestCapacity} guests',
+                        '${widget.venue.guestCapacity} guests',
                         style: GoogleFonts.urbanist(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -216,7 +340,7 @@ class VenueDetailPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  venue.locationAddress ?? 'Address not provided',
+                  widget.venue.locationAddress ?? 'Address not provided',
                   style: GoogleFonts.urbanist(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -226,6 +350,18 @@ class VenueDetailPage extends StatelessWidget {
               ],
             ),
           ),
+          if (widget.venue.latitude != null && widget.venue.longitude != null)
+            IconButton(
+              icon: const Icon(Icons.directions, color: Color(0xff0c1c2c)),
+              onPressed: () async {
+                final url = Uri.parse(
+                  'https://www.google.com/maps/search/?api=1&query=${widget.venue.latitude},${widget.venue.longitude}',
+                );
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
+            ),
         ],
       ),
     );
@@ -247,7 +383,7 @@ class VenueDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            venue.description!,
+            widget.venue.description!,
             style: GoogleFonts.urbanist(
               fontSize: 15,
               height: 1.6,
@@ -278,14 +414,14 @@ class VenueDetailPage extends StatelessWidget {
           // Venue base price
           _buildPriceCard(
             'Venue Base Price',
-            venue.basePrice,
-            venue.venueDiscountPercent,
+            widget.venue.basePrice,
+            widget.venue.venueDiscountPercent,
           ),
 
           const SizedBox(height: 12),
 
           // Services
-          ...venue.services.map((service) {
+          ...widget.venue.services.map((service) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _buildPriceCard(
@@ -397,17 +533,30 @@ class VenueDetailPage extends StatelessWidget {
             height: 150,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: venue.galleryImages.length,
+              itemCount: widget.venue.galleryImages.length,
               itemBuilder: (context, index) {
-                final image = venue.galleryImages[index];
-                return Container(
-                  width: 200,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    image: DecorationImage(
-                      image: NetworkImage(image.imageUrl),
-                      fit: BoxFit.cover,
+                final image = widget.venue.galleryImages[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => _FullScreenImageViewer(
+                          images: widget.venue.galleryImages,
+                          initialIndex: index,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 200,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      image: DecorationImage(
+                        image: NetworkImage(image.imageUrl),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 );
@@ -416,6 +565,149 @@ class VenueDetailPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPoliciesSection() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Policies',
+            style: GoogleFonts.urbanist(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xff0c1c2c),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              widget.venue.policies!,
+              style: GoogleFonts.urbanist(
+                fontSize: 14,
+                height: 1.6,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingStepsSection() {
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xff0c1c2c).withOpacity(0.05),
+            Colors.blue[50]!,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'How to Book',
+            style: GoogleFonts.urbanist(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xff0c1c2c),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildBookingStep(
+            number: '1',
+            title: 'Contact Vendor',
+            description: 'Reach out via phone or email to discuss your requirements',
+            color: Colors.blue,
+          ),
+          _buildBookingStep(
+            number: '2',
+            title: 'Visit Venue',
+            description: 'Schedule a visit to see the venue in person',
+            color: Colors.purple,
+          ),
+          _buildBookingStep(
+            number: '3',
+            title: 'Confirm Booking',
+            description: 'Finalize details and make the payment to confirm',
+            color: Colors.green,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingStep({
+    required String number,
+    required String title,
+    required String description,
+    required Color color,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          margin: const EdgeInsets.only(right: 16, bottom: 16),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: GoogleFonts.urbanist(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.urbanist(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff0c1c2c),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: GoogleFonts.urbanist(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -428,7 +720,7 @@ class VenueDetailPage extends StatelessWidget {
           colors: [
             Color(0xFFF3E5F5),
             Color(0xFFFFE6F0),
-          ], // Purple-pink gradient
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -464,27 +756,67 @@ class VenueDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Email
-          _buildContactItem(
-            icon: Icons.email_rounded,
-            label: 'Email',
-            value: 'vendor@example.com', // TODO: Fetch from vendor profile
-            onTap: () {
-              // TODO: Open email app
-            },
-          ),
+          // Vendor Name
+          if (widget.venue.vendorName != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.business_rounded,
+                    size: 20,
+                    color: Color(0xFF9C27B0),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.venue.vendorName!,
+                      style: GoogleFonts.urbanist(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xff0c1c2c),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-          const SizedBox(height: 12),
+          // Email
+          if (widget.venue.uploaderEmail != null)
+            _buildContactItem(
+              icon: Icons.email_rounded,
+              label: 'Email',
+              value: widget.venue.uploaderEmail!,
+              onTap: () async {
+                final url = Uri.parse('mailto:${widget.venue.uploaderEmail}');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url);
+                }
+              },
+            ),
+
+          if (widget.venue.uploaderEmail != null && widget.venue.uploaderPhone != null)
+            const SizedBox(height: 12),
 
           // Phone
-          _buildContactItem(
-            icon: Icons.phone_rounded,
-            label: 'Phone',
-            value: '+91 98765 43210', // TODO: Fetch from vendor profile
-            onTap: () {
-              // TODO: Open dialer
-            },
-          ),
+          if (widget.venue.uploaderPhone != null)
+            _buildContactItem(
+              icon: Icons.phone_rounded,
+              label: 'Phone',
+              value: widget.venue.uploaderPhone!,
+              onTap: () async {
+                final url = Uri.parse('tel:${widget.venue.uploaderPhone}');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url);
+                }
+              },
+            ),
 
           const SizedBox(height: 16),
 
@@ -581,45 +913,10 @@ class VenueDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPoliciesSection() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Policies',
-            style: GoogleFonts.urbanist(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xff0c1c2c),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              venue.policies!,
-              style: GoogleFonts.urbanist(
-                fontSize: 14,
-                height: 1.6,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBottomBar(BuildContext context) {
     final totalPrice =
-        venue.discountedVenuePrice +
-        venue.services.fold(
+        widget.venue.discountedVenuePrice +
+        widget.venue.services.fold(
           0.0,
           (sum, service) => sum + service.discountedPrice,
         );
@@ -690,6 +987,98 @@ class VenueDetailPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Full-screen image viewer with zoom
+class _FullScreenImageViewer extends StatefulWidget {
+  final List<VenueGalleryImage> images;
+  final int initialIndex;
+
+  const _FullScreenImageViewer({
+    required this.images,
+    required this.initialIndex,
+  });
+
+  @override
+  State<_FullScreenImageViewer> createState() => _FullScreenImageViewerState();
+}
+
+class _FullScreenImageViewerState extends State<_FullScreenImageViewer> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Image viewer
+          PageView.builder(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            itemCount: widget.images.length,
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                minScale: 0.5,
+                maxScale: 4.0,
+                child: Center(
+                  child: Image.network(
+                    widget.images[index].imageUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Close button
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 10,
+            left: 10,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+
+          // Page indicator
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                '${_currentIndex + 1} / ${widget.images.length}',
+                style: GoogleFonts.urbanist(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1037,18 +1037,53 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       );
     }
     
-    // Filter venues by selected location
+    // Filter venues by selected location and guest capacity
     final selectedLocation = packageData['location']?.toString().trim().toLowerCase() ?? '';
-    final filteredVenues = selectedLocation.isEmpty 
-        ? venues 
-        : venues.where((venue) => venue.shortLocation.toLowerCase().trim().contains(selectedLocation) || venue.locationAddress?.toLowerCase().contains(selectedLocation) == true).toList();
+    final guestCount = packageData['guestCount'] ?? 0;
+    
+    // Debug logging
+    debugPrint('🔍 Guest Count Filter: $guestCount');
+    
+    final filteredVenues = venues.where((venue) {
+      // Check location match
+      final locationMatch = selectedLocation.isEmpty ||
+          venue.shortLocation.toLowerCase().trim().contains(selectedLocation) ||
+          venue.locationAddress?.toLowerCase().contains(selectedLocation) == true;
+      
+      // Check capacity
+      // If guestCount <= 0, don't filter by capacity
+      // If capacity is null, show the venue (we don't have capacity data)
+      // If capacity is available, only show if it meets the requirement
+      bool capacityMatch;
+      if (guestCount <= 0) {
+        capacityMatch = true; // No guest count specified, show all
+      } else if (venue.guestCapacity == null) {
+        capacityMatch = true; // No capacity data available, show venue
+      } else {
+        capacityMatch = venue.guestCapacity! >= guestCount; // Filter by capacity
+      }
+      
+      // Debug logging for each venue
+      debugPrint('Venue: ${venue.name}, Capacity: ${venue.guestCapacity}, GuestCount: $guestCount, LocationMatch: $locationMatch, CapacityMatch: $capacityMatch');
+      
+      return locationMatch && capacityMatch;
+    }).toList();
     
     if (filteredVenues.isEmpty) {
+      String message = 'No venues available';
+      if (selectedLocation.isNotEmpty && guestCount > 0) {
+        message = 'No venues available in $selectedLocation for $guestCount guests';
+      } else if (selectedLocation.isNotEmpty) {
+        message = 'No venues available in $selectedLocation';
+      } else if (guestCount > 0) {
+        message = 'No venues available for $guestCount guests';
+      }
+      
       return Center(
         child: Padding(
           padding: EdgeInsets.all(40),
           child: Text(
-            selectedLocation.isEmpty ? 'No venues available' : 'No venues available in $selectedLocation',
+            message,
             style: GoogleFonts.urbanist(color: Colors.grey),
             textAlign: TextAlign.center,
           ),
