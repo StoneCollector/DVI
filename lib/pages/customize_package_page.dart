@@ -163,6 +163,29 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     return total;
   }
 
+  // Helper method to calculate duration in hours
+  double? _calculateDurationInHours(String startTime, String endTime) {
+    if (startTime.isEmpty || endTime.isEmpty) return null;
+    
+    try {
+      final startParts = startTime.split(':');
+      final endParts = endTime.split(':');
+      
+      final startHour = int.parse(startParts[0]);
+      final startMinute = int.parse(startParts[1]);
+      final endHour = int.parse(endParts[0]);
+      final endMinute = int.parse(endParts[1]);
+      
+      final startTotalMinutes = startHour * 60 + startMinute;
+      final endTotalMinutes = endHour * 60 + endMinute;
+      
+      final durationMinutes = endTotalMinutes - startTotalMinutes;
+      return durationMinutes / 60.0;
+    } catch (e) {
+      return null;
+    }
+  }
+
   bool isEventBasicsValid() {
     errors.clear();
     
@@ -186,6 +209,31 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     if (packageData['serviceRequirement'] == 'vendors' && 
         packageData['venueDetails'].toString().trim().isEmpty) {
       errors['venueDetails'] = 'Please enter your venue details';
+    }
+    
+    // Validate time duration (3-12 hours)
+    final startTime = packageData['startTime'].toString();
+    final endTime = packageData['endTime'].toString();
+    
+    if (startTime.isEmpty) {
+      errors['startTime'] = 'Start time is required';
+    }
+    if (endTime.isEmpty) {
+      errors['endTime'] = 'End time is required';
+    }
+    
+    if (startTime.isNotEmpty && endTime.isNotEmpty) {
+      final duration = _calculateDurationInHours(startTime, endTime);
+      
+      if (duration == null) {
+        errors['endTime'] = 'Invalid time format';
+      } else if (duration <= 0) {
+        errors['endTime'] = 'End time must be after start time';
+      } else if (duration < 3) {
+        errors['endTime'] = 'Event must be at least 3 hours';
+      } else if (duration > 12) {
+        errors['endTime'] = 'Event cannot exceed 12 hours';
+      }
     }
     
     setState(() {});
@@ -543,6 +591,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                 child: _buildTimeField(
                   label: 'Start Time',
                   value: packageData['startTime'],
+                  error: errors['startTime'],
                   onChanged: (value) => setState(() => packageData['startTime'] = value),
                 ),
               ),
@@ -551,12 +600,45 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                 child: _buildTimeField(
                   label: 'End Time',
                   value: packageData['endTime'],
+                  error: errors['endTime'],
                   onChanged: (value) => setState(() => packageData['endTime'] = value),
                 ),
               ),
             ],
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 4),
+          // Show duration info if both times are set
+          if (packageData['startTime'].toString().isNotEmpty && 
+              packageData['endTime'].toString().isNotEmpty)
+            Builder(
+              builder: (context) {
+                final duration = _calculateDurationInHours(
+                  packageData['startTime'].toString(),
+                  packageData['endTime'].toString(),
+                );
+                if (duration != null && duration > 0) {
+                  final hours = duration.floor();
+                  final minutes = ((duration - hours) * 60).round();
+                  final durationText = minutes > 0 
+                    ? '${hours}h ${minutes}m' 
+                    : '${hours}h';
+                  final isValid = duration >= 3 && duration <= 12;
+                  return Padding(
+                    padding: EdgeInsets.only(left: 4),
+                    child: Text(
+                      'Duration: $durationText',
+                      style: GoogleFonts.urbanist(
+                        fontSize: 11,
+                        color: isValid ? Colors.green[700] : Colors.red[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }
+                return SizedBox.shrink();
+              },
+            ),
+          SizedBox(height: 8),
           
           // Location
           _buildTextField(
@@ -827,6 +909,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
   Widget _buildTimeField({
     required String label,
     required String value,
+    String? error,
     required Function(String) onChanged,
   }) {
     return Column(
@@ -861,9 +944,20 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderSide: BorderSide(color: error != null ? Colors.red : Colors.grey[300]!),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: error != null ? Colors.red : Color(0xff0c1c2c), width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.red, width: 1),
               ),
               suffixIcon: Icon(Icons.access_time, color: Color(0xff0c1c2c)),
+              errorText: error,
+              errorStyle: GoogleFonts.urbanist(fontSize: 10),
+              errorMaxLines: 2,
             ),
             child: Text(
               value.isEmpty ? 'Select Time' : value,
@@ -1548,8 +1642,16 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
   }
 
   Widget _buildNavigationButtons() {
+    // Get the bottom padding to account for system navigation bar
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: EdgeInsets.only(
+        left: 12,
+        right: 12,
+        top: 10,
+        bottom: 10 + bottomInset, // Add system bottom inset (nav buttons area)
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [

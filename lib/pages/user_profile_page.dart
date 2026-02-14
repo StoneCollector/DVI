@@ -8,6 +8,7 @@ import 'package:dreamventz/config/supabase_config.dart';
 import 'package:dreamventz/models/user_model.dart';
 import 'package:dreamventz/services/user_service.dart';
 import 'package:dreamventz/utils/constants.dart';
+import 'package:dreamventz/utils/validators.dart';
 
 class UserProfilePage extends StatefulWidget {
   const UserProfilePage({super.key});
@@ -716,6 +717,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                 ? TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
+                    validator: Validators.validatePhone,
                     style: GoogleFonts.urbanist(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
