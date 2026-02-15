@@ -350,15 +350,18 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
               ],
             ),
           ),
-          if (widget.venue.latitude != null && widget.venue.longitude != null)
+          if (widget.venue.locationAddress != null && widget.venue.locationAddress!.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.directions, color: Color(0xff0c1c2c)),
               onPressed: () async {
-                final url = Uri.parse(
-                  'https://www.google.com/maps/search/?api=1&query=${widget.venue.latitude},${widget.venue.longitude}',
-                );
-                if (await canLaunchUrl(url)) {
+                final address = Uri.encodeComponent(widget.venue.locationAddress!);
+                final url = Uri.parse('geo:0,0?q=$address');
+                try {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
+                } catch (e) {
+                  // Fallback to web URL if geo: scheme fails
+                  final webUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$address');
+                  await launchUrl(webUrl, mode: LaunchMode.externalApplication);
                 }
               },
             ),
