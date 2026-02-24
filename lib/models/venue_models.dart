@@ -14,6 +14,9 @@ class VenueData {
   final double? rating;
   final int reviewCount;
   final int? guestCapacity; // Will be inferred from services or set manually
+  final String? uploaderPhone;
+  final String? uploaderEmail;
+  final String? vendorName;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -36,6 +39,9 @@ class VenueData {
     this.rating,
     this.reviewCount = 0,
     this.guestCapacity,
+    this.uploaderPhone,
+    this.uploaderEmail,
+    this.vendorName,
     this.createdAt,
     this.updatedAt,
     this.services = const [],
@@ -43,6 +49,14 @@ class VenueData {
   });
 
   factory VenueData.fromJson(Map<String, dynamic> json) {
+    // Helper to safely parse capacity as int
+    int? parseCapacity(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+    
     return VenueData(
       id: json['id'],
       vendorId: json['vendor_id'],
@@ -57,7 +71,10 @@ class VenueData {
       policies: json['policies'],
       rating: json['rating']?.toDouble(),
       reviewCount: json['review_count'] ?? 0,
-      guestCapacity: json['guest_capacity'],
+      guestCapacity: parseCapacity(json['capacity'] ?? json['guest_capacity']),
+      uploaderPhone: json['uploader_phone'],
+      uploaderEmail: json['uploader_email'],
+      vendorName: json['vendor_name'],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,

@@ -157,7 +157,7 @@ class _VendorTileState extends State<VendorTile> {
 
           // Vendor Details
           Padding(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.only(left: 14.0, right: 14.0, bottom: 14.0, top: 8.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -170,7 +170,7 @@ class _VendorTileState extends State<VendorTile> {
                     color: Color(0xff0c1c2c),
                   ),
                 ),
-                SizedBox(height: 8),
+                SizedBox(height: 4),
 
                 // Service Type chips
                 Wrap(

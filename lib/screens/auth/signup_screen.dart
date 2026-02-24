@@ -263,7 +263,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           // Phone Number Field
                           _buildTextField(
                             label: "Phone Number (Optional)",
-                            hint: "+1 234 567 8900",
+                            hint: "10 digit mobile number",
                             prefixIcon: Icons.phone_outlined,
                             controller: _phoneController,
                             validator: Validators.validatePhone,

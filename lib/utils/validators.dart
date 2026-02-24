@@ -76,11 +76,20 @@ class Validators {
       return null;
     }
 
-    // Remove spaces and dashes
-    String cleaned = value.replaceAll(RegExp(r'[\s-]'), '');
+    // Remove spaces, dashes, and any non-digit characters except +
+    String cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    
+    // Remove + prefix if present
+    if (cleaned.startsWith('+')) {
+      cleaned = cleaned.substring(1);
+    }
+    
+    // Remove country code if present (assuming it starts with country code like +91, +1 etc)
+    // Extract only digits
+    String digitsOnly = cleaned.replaceAll(RegExp(r'[^0-9]'), '');
 
-    if (cleaned.length < AppConstants.phoneMinLength) {
-      return 'Please enter a valid phone number';
+    if (digitsOnly.length != 10) {
+      return 'Phone number must be exactly 10 digits';
     }
 
     return null;

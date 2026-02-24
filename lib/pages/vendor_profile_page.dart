@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/vendor_card_service.dart';
 
 class VendorProfilePage extends StatelessWidget {
   final Map<String, dynamic> vendorData;
@@ -8,10 +9,8 @@ class VendorProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic image URL from Supabase storage bucket
-    // Replace 'carasol' with your actual bucket name if it differs
-    final String imageUrl =
-        "https://zyozigpldjruomhqaqjy.supabase.co/storage/v1/object/public/carasol/${vendorData['image_path']}";
+    // Get image URL from vendor_card storage bucket
+    final String imageUrl = VendorCardService.getImageUrl(vendorData['image_path'] ?? '');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -76,7 +75,6 @@ class VendorProfilePage extends StatelessWidget {
                       color: const Color(0xff0c1c2c),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
                       const Icon(
@@ -94,7 +92,6 @@ class VendorProfilePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
                       const Icon(Icons.star, size: 18, color: Colors.amber),
@@ -121,7 +118,6 @@ class VendorProfilePage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionTitle("What we offer"),
-                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -142,20 +138,19 @@ class VendorProfilePage extends StatelessWidget {
                             )
                             .toList(),
                   ),
-                  const Divider(height: 40),
+                  const Divider(height: 20),
 
                   _buildSectionTitle("Service Information"),
-                  const SizedBox(height: 10),
                   _buildInfoRow(
                     Icons.place_outlined,
                     "City",
                     vendorData['city'],
                   ),
 
-                  const Divider(height: 40),
+                  const Divider(height: 20),
 
                   _buildSectionTitle("Cost & Pricing"),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 5),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -210,7 +205,7 @@ class VendorProfilePage extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 15),
                   _buildSectionTitle("About Us"),
                   const SizedBox(height: 8),
                   Text(
