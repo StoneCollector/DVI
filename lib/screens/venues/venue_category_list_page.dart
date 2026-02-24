@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/venue_models.dart';
+import '../../models/venue_models.dart';
 import 'venue_detail_page.dart';
 
 /// Venue Category List Page with Filters - Similar to PhotographyPage

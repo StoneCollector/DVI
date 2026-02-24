@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/vendor_card_service.dart';
+import '../../services/vendor_card_service.dart';
 
 class VendorProfilePage extends StatelessWidget {
   final Map<String, dynamic> vendorData;
@@ -10,7 +10,9 @@ class VendorProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Get image URL from vendor_card storage bucket
-    final String imageUrl = VendorCardService.getImageUrl(vendorData['image_path'] ?? '');
+    final String imageUrl = VendorCardService.getImageUrl(
+      vendorData['image_path'] ?? '',
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,

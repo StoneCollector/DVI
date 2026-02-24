@@ -6,10 +6,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/carasol.dart';
 import 'package:dreamventz/components/services_tile.dart';
 import 'package:dreamventz/components/trending_tile.dart';
-import 'package:dreamventz/pages/vendor_list_page.dart';
-import 'package:dreamventz/pages/user_profile_page.dart';
-import 'package:dreamventz/pages/venue_detail_page.dart';
-import 'package:dreamventz/pages/all_venues_page.dart';
+import 'package:dreamventz/screens/vendors/vendor_list_page.dart';
+import 'package:dreamventz/screens/profile/user_profile_page.dart';
+import 'package:dreamventz/screens/venues/venue_detail_page.dart';
+import 'package:dreamventz/screens/venues/all_venues_page.dart';
 import 'package:dreamventz/services/venue_service.dart';
 import 'package:dreamventz/models/venue_models.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -560,7 +560,7 @@ class _HomePageState extends State<HomePage>
                       ],
                     ),
                     child: ClipRRect(
-                       borderRadius: BorderRadius.circular(15.0),
+                      borderRadius: BorderRadius.circular(15.0),
                       child: Image.asset(
                         'lib/images/customize.png',
                         width: double.infinity,
@@ -594,7 +594,7 @@ class _HomePageState extends State<HomePage>
                       ],
                     ),
                     child: ClipRRect(
-                       borderRadius: BorderRadius.circular(15.0),
+                      borderRadius: BorderRadius.circular(15.0),
                       child: Image.asset(
                         'lib/images/coordinate.png',
                         width: double.infinity,

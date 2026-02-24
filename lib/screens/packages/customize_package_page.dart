@@ -5,7 +5,7 @@ import 'package:dreamventz/models/venue_models.dart';
 import 'package:dreamventz/services/venue_service.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
 import 'package:dreamventz/utils/supabase_config.dart';
-import 'package:dreamventz/pages/vendor_profile_page.dart';
+import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 import 'package:dreamventz/components/customized_vendor_tile.dart';
 import 'package:dreamventz/components/customized_venue_tile.dart';
 
@@ -19,7 +19,7 @@ class CustomizePackagePage extends StatefulWidget {
 class _CustomizePackagePageState extends State<CustomizePackagePage> {
   int currentStep = 1;
   final _venueService = VenueService();
-  
+
   // Loading states
   bool isLoadingVenues = false;
   bool isLoadingVendors = false;
@@ -27,7 +27,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
   // Data
   List<VenueData> venues = [];
   Map<int, List<Map<String, dynamic>>> vendorsByCategory = {};
-  
+
   // Package data
   Map<String, dynamic> packageData = {
     // Step 1: Event Basics
@@ -40,7 +40,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     'endTime': '',
     'location': '',
     'guestCount': 100,
-    
+
     // Step 2: Selections
     'selectedVenue': null,
     'selectedPhotographer': null,
@@ -55,7 +55,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
   // Validation errors
   Map<String, String> errors = {};
-  
+
   // Active vendor tab
   String activeVendorTab = 'venue';
 
@@ -110,8 +110,10 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             .from('vendor_cards')
             .select()
             .eq('category_id', categoryId);
-        
-        vendorsByCategory[categoryId] = List<Map<String, dynamic>>.from(response);
+
+        vendorsByCategory[categoryId] = List<Map<String, dynamic>>.from(
+          response,
+        );
       }
       if (!mounted) return;
       setState(() => isLoadingVendors = false);
@@ -123,21 +125,18 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
   }
 
   String formatCurrency(double value) {
-    return '₹${value.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    )}';
+    return '₹${value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
   }
 
   double calculateTotal() {
     double total = 0;
-    
+
     // Venue
     if (packageData['selectedVenue'] != null) {
       final venue = packageData['selectedVenue'] as VenueData;
       total += venue.discountedVenuePrice;
     }
-    
+
     // Vendors
     final vendorKeys = [
       'selectedPhotographer',
@@ -149,7 +148,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       'selectedPandit',
       'selectedInvites',
     ];
-    
+
     for (var key in vendorKeys) {
       if (packageData[key] != null) {
         final vendor = packageData[key] as Map<String, dynamic>;
@@ -159,26 +158,26 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         }
       }
     }
-    
+
     return total;
   }
 
   // Helper method to calculate duration in hours
   double? _calculateDurationInHours(String startTime, String endTime) {
     if (startTime.isEmpty || endTime.isEmpty) return null;
-    
+
     try {
       final startParts = startTime.split(':');
       final endParts = endTime.split(':');
-      
+
       final startHour = int.parse(startParts[0]);
       final startMinute = int.parse(startParts[1]);
       final endHour = int.parse(endParts[0]);
       final endMinute = int.parse(endParts[1]);
-      
+
       final startTotalMinutes = startHour * 60 + startMinute;
       final endTotalMinutes = endHour * 60 + endMinute;
-      
+
       final durationMinutes = endTotalMinutes - startTotalMinutes;
       return durationMinutes / 60.0;
     } catch (e) {
@@ -188,7 +187,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
   bool isEventBasicsValid() {
     errors.clear();
-    
+
     if (packageData['eventName'].toString().trim().isEmpty) {
       errors['eventName'] = 'Event name is required';
     }
@@ -204,27 +203,27 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     if (packageData['guestCount'] == null || packageData['guestCount'] <= 0) {
       errors['guestCount'] = 'Guest count must be greater than 0';
     }
-    
+
     // Validate venue details if "Vendors Only" is selected
-    if (packageData['serviceRequirement'] == 'vendors' && 
+    if (packageData['serviceRequirement'] == 'vendors' &&
         packageData['venueDetails'].toString().trim().isEmpty) {
       errors['venueDetails'] = 'Please enter your venue details';
     }
-    
+
     // Validate time duration (3-12 hours)
     final startTime = packageData['startTime'].toString();
     final endTime = packageData['endTime'].toString();
-    
+
     if (startTime.isEmpty) {
       errors['startTime'] = 'Start time is required';
     }
     if (endTime.isEmpty) {
       errors['endTime'] = 'End time is required';
     }
-    
+
     if (startTime.isNotEmpty && endTime.isNotEmpty) {
       final duration = _calculateDurationInHours(startTime, endTime);
-      
+
       if (duration == null) {
         errors['endTime'] = 'Invalid time format';
       } else if (duration <= 0) {
@@ -235,7 +234,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         errors['endTime'] = 'Event cannot exceed 12 hours';
       }
     }
-    
+
     setState(() {});
     return errors.isEmpty;
   }
@@ -244,7 +243,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     if (currentStep == 1 && !isEventBasicsValid()) {
       return;
     }
-    
+
     if (currentStep < 4) {
       setState(() => currentStep++);
     }
@@ -363,7 +362,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         children: [
           // Step Indicator
           _buildStepIndicator(),
-          
+
           // Content
           Expanded(
             child: SingleChildScrollView(
@@ -374,13 +373,16 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                   return FadeTransition(
                     opacity: animation,
                     child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: Offset(0.1, 0),
-                        end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      )),
+                      position:
+                          Tween<Offset>(
+                            begin: Offset(0.1, 0),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          ),
                       child: child,
                     ),
                   );
@@ -397,7 +399,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               ),
             ),
           ),
-          
+
           // Navigation Buttons
           _buildNavigationButtons(),
         ],
@@ -441,13 +443,15 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               decoration: BoxDecoration(
                 color: isActive ? Color(0xff0c1c2c) : Colors.grey[300],
                 shape: BoxShape.circle,
-                boxShadow: isActive ? [
-                  BoxShadow(
-                    color: Color(0xff0c1c2c).withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    spreadRadius: 2,
-                  )
-                ] : [],
+                boxShadow: isActive
+                    ? [
+                        BoxShadow(
+                          color: Color(0xff0c1c2c).withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                    : [],
               ),
               child: Center(
                 child: Text(
@@ -510,27 +514,29 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             ),
           ),
           SizedBox(height: 12),
-          
+
           // Event Name
           _buildTextField(
             label: 'Event Name',
             hint: 'e.g. Rahul\'s Wedding',
             value: packageData['eventName'],
             error: errors['eventName'],
-            onChanged: (value) => setState(() => packageData['eventName'] = value),
+            onChanged: (value) =>
+                setState(() => packageData['eventName'] = value),
           ),
           SizedBox(height: 12),
-          
+
           // Event Type
           _buildDropdown(
             label: 'Event Type',
             value: packageData['eventType'],
             error: errors['eventType'],
             items: ['Wedding', 'Birthday', 'Corporate', 'Anniversary'],
-            onChanged: (value) => setState(() => packageData['eventType'] = value),
+            onChanged: (value) =>
+                setState(() => packageData['eventType'] = value),
           ),
           SizedBox(height: 12),
-          
+
           // Service Requirement
           Text(
             'What services do you need?',
@@ -561,7 +567,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             ],
           ),
           SizedBox(height: 12),
-          
+
           // Venue Details (if Vendors Only)
           if (packageData['serviceRequirement'] == 'vendors') ...[
             _buildTextField(
@@ -570,20 +576,22 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               value: packageData['venueDetails'],
               error: errors['venueDetails'],
               maxLines: 3,
-              onChanged: (value) => setState(() => packageData['venueDetails'] = value),
+              onChanged: (value) =>
+                  setState(() => packageData['venueDetails'] = value),
             ),
             SizedBox(height: 12),
           ],
-          
+
           // Event Date
           _buildDateField(
             label: 'Event Date',
             value: packageData['eventDate'],
             error: errors['eventDate'],
-            onChanged: (value) => setState(() => packageData['eventDate'] = value),
+            onChanged: (value) =>
+                setState(() => packageData['eventDate'] = value),
           ),
           SizedBox(height: 12),
-          
+
           // Time
           Row(
             children: [
@@ -592,7 +600,8 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                   label: 'Start Time',
                   value: packageData['startTime'],
                   error: errors['startTime'],
-                  onChanged: (value) => setState(() => packageData['startTime'] = value),
+                  onChanged: (value) =>
+                      setState(() => packageData['startTime'] = value),
                 ),
               ),
               SizedBox(width: 8),
@@ -601,14 +610,15 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                   label: 'End Time',
                   value: packageData['endTime'],
                   error: errors['endTime'],
-                  onChanged: (value) => setState(() => packageData['endTime'] = value),
+                  onChanged: (value) =>
+                      setState(() => packageData['endTime'] = value),
                 ),
               ),
             ],
           ),
           SizedBox(height: 4),
           // Show duration info if both times are set
-          if (packageData['startTime'].toString().isNotEmpty && 
+          if (packageData['startTime'].toString().isNotEmpty &&
               packageData['endTime'].toString().isNotEmpty)
             Builder(
               builder: (context) {
@@ -619,9 +629,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                 if (duration != null && duration > 0) {
                   final hours = duration.floor();
                   final minutes = ((duration - hours) * 60).round();
-                  final durationText = minutes > 0 
-                    ? '${hours}h ${minutes}m' 
-                    : '${hours}h';
+                  final durationText = minutes > 0
+                      ? '${hours}h ${minutes}m'
+                      : '${hours}h';
                   final isValid = duration >= 3 && duration <= 12;
                   return Padding(
                     padding: EdgeInsets.only(left: 4),
@@ -639,17 +649,18 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               },
             ),
           SizedBox(height: 8),
-          
+
           // Location
           _buildTextField(
             label: 'City/Area',
             hint: 'Enter your city (e.g., Mumbai)',
             value: packageData['location'],
             error: errors['location'],
-            onChanged: (value) => setState(() => packageData['location'] = value),
+            onChanged: (value) =>
+                setState(() => packageData['location'] = value),
           ),
           SizedBox(height: 12),
-          
+
           // Guest Count
           _buildTextField(
             label: 'Guest Count',
@@ -657,7 +668,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             value: packageData['guestCount'].toString(),
             error: errors['guestCount'],
             keyboardType: TextInputType.number,
-            onChanged: (value) => setState(() => packageData['guestCount'] = int.tryParse(value) ?? 0),
+            onChanged: (value) => setState(
+              () => packageData['guestCount'] = int.tryParse(value) ?? 0,
+            ),
           ),
         ],
       ),
@@ -673,19 +686,23 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         curve: Curves.easeInOut,
         padding: EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xff0c1c2c).withValues(alpha: 0.05) : Colors.grey[50],
+          color: isSelected
+              ? Color(0xff0c1c2c).withValues(alpha: 0.05)
+              : Colors.grey[50],
           border: Border.all(
             color: isSelected ? Color(0xff0c1c2c) : Colors.grey[300]!,
             width: 1.5,
           ),
           borderRadius: BorderRadius.circular(8),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: Color(0xff0c1c2c).withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            )
-          ] : [],
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Color(0xff0c1c2c).withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -693,7 +710,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             Row(
               children: [
                 Icon(
-                  isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  isSelected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
                   color: isSelected ? Color(0xff0c1c2c) : Colors.grey,
                   size: 18,
                 ),
@@ -749,7 +768,10 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         ),
         SizedBox(height: 8),
         TextField(
-          controller: TextEditingController(text: value)..selection = TextSelection.fromPosition(TextPosition(offset: value.length)),
+          controller: TextEditingController(text: value)
+            ..selection = TextSelection.fromPosition(
+              TextPosition(offset: value.length),
+            ),
           maxLines: maxLines,
           keyboardType: keyboardType,
           style: GoogleFonts.urbanist(fontSize: 13),
@@ -931,7 +953,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               initialTime: TimeOfDay.now(),
             );
             if (time != null && mounted) {
-              onChanged('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
+              onChanged(
+                '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+              );
             }
           },
           child: InputDecorator(
@@ -944,11 +968,16 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: error != null ? Colors.red : Colors.grey[300]!),
+                borderSide: BorderSide(
+                  color: error != null ? Colors.red : Colors.grey[300]!,
+                ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: error != null ? Colors.red : Color(0xff0c1c2c), width: 1.5),
+                borderSide: BorderSide(
+                  color: error != null ? Colors.red : Color(0xff0c1c2c),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
@@ -974,11 +1003,11 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
   Widget _buildVendorServices() {
     // Determine which tabs to show
     List<Map<String, dynamic>> tabs = [];
-    
+
     if (packageData['serviceRequirement'] == 'both') {
       tabs.add({'id': 'venue', 'label': 'Venue', 'icon': Icons.location_on});
     }
-    
+
     tabs.addAll([
       {'id': 'photography', 'label': 'Photography', 'icon': Icons.camera_alt},
       {'id': 'mehndi', 'label': 'Mehndi', 'icon': Icons.brush},
@@ -989,7 +1018,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       {'id': 'pandits', 'label': 'Pandits', 'icon': Icons.self_improvement},
       {'id': 'invites', 'label': 'Invites', 'icon': Icons.card_giftcard},
     ]);
-    
+
     return Container(
       padding: EdgeInsets.all(6),
       decoration: BoxDecoration(
@@ -998,7 +1027,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             color: Colors.grey[300]!,
             blurRadius: 6,
             offset: Offset(0, 2),
-          )
+          ),
         ],
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -1015,7 +1044,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             ),
           ),
           SizedBox(height: 6),
-          
+
           // Tabs
           SizedBox(
             height: 38,
@@ -1057,7 +1086,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                           style: GoogleFonts.urbanist(
                             fontSize: 12,
                             color: isActive ? Colors.white : Colors.grey[700],
-                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                            fontWeight: isActive
+                                ? FontWeight.bold
+                                : FontWeight.normal,
                           ),
                         ),
                       ],
@@ -1067,11 +1098,11 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               },
             ),
           ),
-          
+
           // Filter chips (only for vendor tabs, not venue)
           if (activeVendorTab != 'venue') ...[
             Container(
-              padding: EdgeInsets.symmetric( vertical: 8),
+              padding: EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -1110,7 +1141,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               ),
             ),
           ],
-          
+
           // Content based on active tab
           if (activeVendorTab == 'venue')
             _buildVenueSelection()
@@ -1130,20 +1161,23 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         ),
       );
     }
-    
+
     // Filter venues by selected location and guest capacity
-    final selectedLocation = packageData['location']?.toString().trim().toLowerCase() ?? '';
+    final selectedLocation =
+        packageData['location']?.toString().trim().toLowerCase() ?? '';
     final guestCount = packageData['guestCount'] ?? 0;
-    
+
     // Debug logging
     debugPrint('🔍 Guest Count Filter: $guestCount');
-    
+
     final filteredVenues = venues.where((venue) {
       // Check location match
-      final locationMatch = selectedLocation.isEmpty ||
+      final locationMatch =
+          selectedLocation.isEmpty ||
           venue.shortLocation.toLowerCase().trim().contains(selectedLocation) ||
-          venue.locationAddress?.toLowerCase().contains(selectedLocation) == true;
-      
+          venue.locationAddress?.toLowerCase().contains(selectedLocation) ==
+              true;
+
       // Check capacity
       // If guestCount <= 0, don't filter by capacity
       // If capacity is null, show the venue (we don't have capacity data)
@@ -1154,25 +1188,29 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       } else if (venue.guestCapacity == null) {
         capacityMatch = true; // No capacity data available, show venue
       } else {
-        capacityMatch = venue.guestCapacity! >= guestCount; // Filter by capacity
+        capacityMatch =
+            venue.guestCapacity! >= guestCount; // Filter by capacity
       }
-      
+
       // Debug logging for each venue
-      debugPrint('Venue: ${venue.name}, Capacity: ${venue.guestCapacity}, GuestCount: $guestCount, LocationMatch: $locationMatch, CapacityMatch: $capacityMatch');
-      
+      debugPrint(
+        'Venue: ${venue.name}, Capacity: ${venue.guestCapacity}, GuestCount: $guestCount, LocationMatch: $locationMatch, CapacityMatch: $capacityMatch',
+      );
+
       return locationMatch && capacityMatch;
     }).toList();
-    
+
     if (filteredVenues.isEmpty) {
       String message = 'No venues available';
       if (selectedLocation.isNotEmpty && guestCount > 0) {
-        message = 'No venues available in $selectedLocation for $guestCount guests';
+        message =
+            'No venues available in $selectedLocation for $guestCount guests';
       } else if (selectedLocation.isNotEmpty) {
         message = 'No venues available in $selectedLocation';
       } else if (guestCount > 0) {
         message = 'No venues available for $guestCount guests';
       }
-      
+
       return Center(
         child: Padding(
           padding: EdgeInsets.all(40),
@@ -1184,14 +1222,16 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         ),
       );
     }
-    
+
     return Column(
       children: filteredVenues.map((venue) {
         final isSelected = packageData['selectedVenue'] == venue;
         return CustomizedVenueTile(
           venue: venue,
           isSelected: isSelected,
-          onTap: () => setState(() => packageData['selectedVenue'] = isSelected ? null : venue),
+          onTap: () => setState(
+            () => packageData['selectedVenue'] = isSelected ? null : venue,
+          ),
         );
       }).toList(),
     );
@@ -1209,7 +1249,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       'pandits': 7,
       'invites': 8,
     };
-    
+
     final selectionKeyMap = {
       'photography': 'selectedPhotographer',
       'mehndi': 'selectedMehndiArtist',
@@ -1220,14 +1260,14 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       'pandits': 'selectedPandit',
       'invites': 'selectedInvites',
     };
-    
+
     final categoryId = categoryIdMap[tabId];
     final selectionKey = selectionKeyMap[tabId];
-    
+
     if (categoryId == null || selectionKey == null) {
       return Center(child: Text('Invalid category'));
     }
-    
+
     if (isLoadingVendors) {
       return Center(
         child: Padding(
@@ -1236,20 +1276,24 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         ),
       );
     }
-    
+
     final vendors = vendorsByCategory[categoryId] ?? [];
-    
+
     // Apply filters
     var filteredVendors = List<Map<String, dynamic>>.from(vendors);
-    
+
     // Location filter
-    final selectedLocation = packageData['location']?.toString().trim().toLowerCase() ?? '';
+    final selectedLocation =
+        packageData['location']?.toString().trim().toLowerCase() ?? '';
     if (selectedLocation.isNotEmpty) {
-      filteredVendors = filteredVendors.where((vendor) => 
-        (vendor['city']?.toString().toLowerCase().trim() ?? '').contains(selectedLocation)
-      ).toList();
+      filteredVendors = filteredVendors
+          .where(
+            (vendor) => (vendor['city']?.toString().toLowerCase().trim() ?? '')
+                .contains(selectedLocation),
+          )
+          .toList();
     }
-    
+
     // Service tags filter
     if (selectedServiceTags.isNotEmpty) {
       filteredVendors = filteredVendors.where((vendor) {
@@ -1257,7 +1301,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         return selectedServiceTags.every((tag) => vendorTags.contains(tag));
       }).toList();
     }
-    
+
     // Quality tags filter
     if (selectedQualityTags.isNotEmpty) {
       filteredVendors = filteredVendors.where((vendor) {
@@ -1265,34 +1309,36 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         return selectedQualityTags.every((tag) => vendorTags.contains(tag));
       }).toList();
     }
-    
+
     // Budget filter
     if (vendorBudgetRange == 'Under 20k') {
-      filteredVendors = filteredVendors.where((vendor) => 
-        (vendor['discounted_price'] ?? 0) < 20000
-      ).toList();
+      filteredVendors = filteredVendors
+          .where((vendor) => (vendor['discounted_price'] ?? 0) < 20000)
+          .toList();
     } else if (vendorBudgetRange == '20k-30k') {
       filteredVendors = filteredVendors.where((vendor) {
         final price = vendor['discounted_price'] ?? 0;
         return price >= 20000 && price <= 30000;
       }).toList();
     } else if (vendorBudgetRange == 'Above 30k') {
-      filteredVendors = filteredVendors.where((vendor) => 
-        (vendor['discounted_price'] ?? 0) > 30000
-      ).toList();
+      filteredVendors = filteredVendors
+          .where((vendor) => (vendor['discounted_price'] ?? 0) > 30000)
+          .toList();
     }
-    
+
     // Sort
     if (vendorSortBy == 'Price: Low to High') {
-      filteredVendors.sort((a, b) => 
-        (a['discounted_price'] ?? 0).compareTo(b['discounted_price'] ?? 0)
+      filteredVendors.sort(
+        (a, b) =>
+            (a['discounted_price'] ?? 0).compareTo(b['discounted_price'] ?? 0),
       );
     } else if (vendorSortBy == 'Price: High to Low') {
-      filteredVendors.sort((a, b) => 
-        (b['discounted_price'] ?? 0).compareTo(a['discounted_price'] ?? 0)
+      filteredVendors.sort(
+        (a, b) =>
+            (b['discounted_price'] ?? 0).compareTo(a['discounted_price'] ?? 0),
       );
     }
-    
+
     if (filteredVendors.isEmpty) {
       return Center(
         child: Padding(
@@ -1325,14 +1371,16 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         ),
       );
     }
-    
+
     return Column(
       children: filteredVendors.map((vendor) {
         final isSelected = packageData[selectionKey] == vendor;
         return CustomizedVendorTile(
           vendor: vendor,
           isSelected: isSelected,
-          onTap: () => setState(() => packageData[selectionKey] = isSelected ? null : vendor),
+          onTap: () => setState(
+            () => packageData[selectionKey] = isSelected ? null : vendor,
+          ),
         );
       }).toList(),
     );
@@ -1357,33 +1405,37 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
             ),
           ),
           SizedBox(height: 12),
-          
+
           // Event Details
-          _buildReviewSection(
-            'Event Details',
-            [
-              {'label': 'Event Name', 'value': packageData['eventName']},
-              {'label': 'Event Type', 'value': packageData['eventType']},
-              {'label': 'Date', 'value': packageData['eventDate']},
-              {'label': 'Time', 'value': '${packageData['startTime']} - ${packageData['endTime']}'},
-              {'label': 'Location', 'value': packageData['location']},
-              {'label': 'Guests', 'value': packageData['guestCount'].toString()},
-            ],
-          ),
-          
+          _buildReviewSection('Event Details', [
+            {'label': 'Event Name', 'value': packageData['eventName']},
+            {'label': 'Event Type', 'value': packageData['eventType']},
+            {'label': 'Date', 'value': packageData['eventDate']},
+            {
+              'label': 'Time',
+              'value':
+                  '${packageData['startTime']} - ${packageData['endTime']}',
+            },
+            {'label': 'Location', 'value': packageData['location']},
+            {'label': 'Guests', 'value': packageData['guestCount'].toString()},
+          ]),
+
           // Venue Details
-          if (packageData['serviceRequirement'] == 'vendors' && packageData['venueDetails'].toString().isNotEmpty)
-            _buildReviewSection(
-              'Your Venue',
-              [{'label': 'Venue Details', 'value': packageData['venueDetails']}],
-            ),
+          if (packageData['serviceRequirement'] == 'vendors' &&
+              packageData['venueDetails'].toString().isNotEmpty)
+            _buildReviewSection('Your Venue', [
+              {'label': 'Venue Details', 'value': packageData['venueDetails']},
+            ]),
           if (packageData['selectedVenue'] != null)
             _buildReviewItem(
               'Selected Venue',
               (packageData['selectedVenue'] as VenueData).name,
-              formatCurrency((packageData['selectedVenue'] as VenueData).discountedVenuePrice),
+              formatCurrency(
+                (packageData['selectedVenue'] as VenueData)
+                    .discountedVenuePrice,
+              ),
             ),
-          
+
           // Selected Vendors
           if (packageData['selectedPhotographer'] != null)
             _buildReviewItem(
@@ -1433,9 +1485,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               packageData['selectedInvites']['studio_name'],
               '₹${packageData['selectedInvites']['discounted_price']}',
             ),
-          
+
           Divider(height: 16),
-          
+
           // Total
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1475,31 +1527,33 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
           ),
         ),
         SizedBox(height: 6),
-        ...items.map((item) => Padding(
-              padding: EdgeInsets.symmetric(vertical: 3),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    item['label']!,
+        ...items.map(
+          (item) => Padding(
+            padding: EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  item['label']!,
+                  style: GoogleFonts.urbanist(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    item['value']!,
                     style: GoogleFonts.urbanist(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w600,
                     ),
+                    textAlign: TextAlign.right,
                   ),
-                  Flexible(
-                    child: Text(
-                      item['value']!,
-                      style: GoogleFonts.urbanist(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          ),
+        ),
         Divider(),
       ],
     );
@@ -1568,11 +1622,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
               color: Colors.green[50],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.check_circle,
-              size: 50,
-              color: Colors.green,
-            ),
+            child: Icon(Icons.check_circle, size: 50, color: Colors.green),
           ),
           SizedBox(height: 24),
           Text(
@@ -1587,10 +1637,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
           Text(
             'Your custom package is ready. \nThe total amount is:',
             textAlign: TextAlign.center,
-            style: GoogleFonts.urbanist(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: GoogleFonts.urbanist(fontSize: 14, color: Colors.grey[600]),
           ),
           SizedBox(height: 20),
           Container(
@@ -1644,7 +1691,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
   Widget _buildNavigationButtons() {
     // Get the bottom padding to account for system navigation bar
     final bottomInset = MediaQuery.of(context).padding.bottom;
-    
+
     return Container(
       padding: EdgeInsets.only(
         left: 12,
@@ -1733,33 +1780,37 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       'pandits': 7,
       'invites': 8,
     };
-    
+
     final categoryId = categoryIdMap[activeVendorTab];
     if (categoryId == null) return [];
-    
+
     final vendors = vendorsByCategory[categoryId] ?? [];
-    
+
     // Filter by location only (not by tags, to show available options)
-    final selectedLocation = packageData['location']?.toString().trim().toLowerCase() ?? '';
+    final selectedLocation =
+        packageData['location']?.toString().trim().toLowerCase() ?? '';
     var locationFilteredVendors = vendors;
     if (selectedLocation.isNotEmpty) {
-      locationFilteredVendors = vendors.where((vendor) => 
-        (vendor['city']?.toString().toLowerCase().trim() ?? '').contains(selectedLocation)
-      ).toList();
+      locationFilteredVendors = vendors
+          .where(
+            (vendor) => (vendor['city']?.toString().toLowerCase().trim() ?? '')
+                .contains(selectedLocation),
+          )
+          .toList();
     }
-    
+
     // Extract all unique service tags from these vendors
     final Set<String> tags = {};
     for (var vendor in locationFilteredVendors) {
       final vendorTags = List<String>.from(vendor['service_tags'] ?? []);
       tags.addAll(vendorTags);
     }
-    
+
     final tagList = tags.toList();
     tagList.sort();
     return tagList;
   }
-  
+
   List<String> _getAvailableQualityTags() {
     final categoryIdMap = {
       'photography': 1,
@@ -1771,28 +1822,32 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       'pandits': 7,
       'invites': 8,
     };
-    
+
     final categoryId = categoryIdMap[activeVendorTab];
     if (categoryId == null) return [];
-    
+
     final vendors = vendorsByCategory[categoryId] ?? [];
-    
+
     // Filter by location only (not by tags, to show available options)
-    final selectedLocation = packageData['location']?.toString().trim().toLowerCase() ?? '';
+    final selectedLocation =
+        packageData['location']?.toString().trim().toLowerCase() ?? '';
     var locationFilteredVendors = vendors;
     if (selectedLocation.isNotEmpty) {
-      locationFilteredVendors = vendors.where((vendor) => 
-        (vendor['city']?.toString().toLowerCase().trim() ?? '').contains(selectedLocation)
-      ).toList();
+      locationFilteredVendors = vendors
+          .where(
+            (vendor) => (vendor['city']?.toString().toLowerCase().trim() ?? '')
+                .contains(selectedLocation),
+          )
+          .toList();
     }
-    
+
     // Extract all unique quality tags from these vendors
     final Set<String> tags = {};
     for (var vendor in locationFilteredVendors) {
       final vendorTags = List<String>.from(vendor['quality_tags'] ?? []);
       tags.addAll(vendorTags);
     }
-    
+
     final tagList = tags.toList();
     tagList.sort();
     return tagList;
@@ -1883,7 +1938,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
   void _showVendorServiceTagsDialog() {
     final availableTags = _getAvailableServiceTags();
-    
+
     if (availableTags.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1893,9 +1948,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       );
       return;
     }
-    
+
     List<String> tempSelectedTags = List.from(selectedServiceTags);
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1970,7 +2025,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
   void _showVendorQualityTagsDialog() {
     final availableTags = _getAvailableQualityTags();
-    
+
     if (availableTags.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1980,9 +2035,9 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       );
       return;
     }
-    
+
     List<String> tempSelectedTags = List.from(selectedQualityTags);
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(

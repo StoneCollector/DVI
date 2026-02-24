@@ -3,14 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/vendor_tile.dart';
 import 'package:dreamventz/models/vendor_card.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
-import 'package:dreamventz/pages/vendor_profile_page.dart';
+import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 
 class VendorListPage extends StatefulWidget {
   final String categoryName;
   final int categoryId;
 
   const VendorListPage({
-    super.key, 
+    super.key,
     required this.categoryName,
     required this.categoryId,
   });
@@ -20,7 +20,6 @@ class VendorListPage extends StatefulWidget {
 }
 
 class _VendorListPageState extends State<VendorListPage> {
-
   // Data from Supabase
   List<VendorCard> allVendorCards = [];
   List<VendorCard> filteredVendorCards = [];
@@ -31,15 +30,15 @@ class _VendorListPageState extends State<VendorListPage> {
   String sortBy = 'Rating';
   String budgetRange = 'All';
   String selectedCity = 'All';
-  
+
   // Service tags filter
   List<String> selectedServiceTags = [];
   List<String> availableServiceTags = [];
-  
+
   // Quality tags filter
   List<String> selectedQualityTags = [];
   List<String> availableQualityTags = [];
-  
+
   List<String> availableCities = [];
 
   @override
@@ -56,15 +55,17 @@ class _VendorListPageState extends State<VendorListPage> {
 
     try {
       final service = VendorCardService();
-      
+
       // Fetch vendor cards
-      allVendorCards = await service.getVendorCardsByCategory(widget.categoryId);
-      
+      allVendorCards = await service.getVendorCardsByCategory(
+        widget.categoryId,
+      );
+
       // Fetch cities and tags
       availableCities = await service.getUniqueCities(widget.categoryId);
       availableServiceTags = await service.getAllServiceTags(widget.categoryId);
       availableQualityTags = await service.getAllQualityTags(widget.categoryId);
-      
+
       setState(() {
         filteredVendorCards = List.from(allVendorCards);
         isLoading = false;
@@ -92,8 +93,8 @@ class _VendorListPageState extends State<VendorListPage> {
       if (selectedServiceTags.isNotEmpty) {
         filteredVendorCards = filteredVendorCards.where((card) {
           // Check if ALL selected service tags are present (AND logic)
-          return selectedServiceTags.every((selectedTag) => 
-            card.serviceTags.contains(selectedTag)
+          return selectedServiceTags.every(
+            (selectedTag) => card.serviceTags.contains(selectedTag),
           );
         }).toList();
       }
@@ -102,8 +103,8 @@ class _VendorListPageState extends State<VendorListPage> {
       if (selectedQualityTags.isNotEmpty) {
         filteredVendorCards = filteredVendorCards.where((card) {
           // Check if ALL selected quality tags are present (AND logic)
-          return selectedQualityTags.every((selectedTag) => 
-            card.qualityTags.contains(selectedTag)
+          return selectedQualityTags.every(
+            (selectedTag) => card.qualityTags.contains(selectedTag),
           );
         }).toList();
       }
@@ -115,7 +116,11 @@ class _VendorListPageState extends State<VendorListPage> {
             .toList();
       } else if (budgetRange == '20k-30k') {
         filteredVendorCards = filteredVendorCards
-            .where((card) => card.discountedPrice >= 20000 && card.discountedPrice <= 30000)
+            .where(
+              (card) =>
+                  card.discountedPrice >= 20000 &&
+                  card.discountedPrice <= 30000,
+            )
             .toList();
       } else if (budgetRange == 'Above 30k') {
         filteredVendorCards = filteredVendorCards
@@ -125,11 +130,17 @@ class _VendorListPageState extends State<VendorListPage> {
 
       // Sort
       if (sortBy == 'Price: Low to High') {
-        filteredVendorCards.sort((a, b) => a.discountedPrice.compareTo(b.discountedPrice));
+        filteredVendorCards.sort(
+          (a, b) => a.discountedPrice.compareTo(b.discountedPrice),
+        );
       } else if (sortBy == 'Price: High to Low') {
-        filteredVendorCards.sort((a, b) => b.discountedPrice.compareTo(a.discountedPrice));
+        filteredVendorCards.sort(
+          (a, b) => b.discountedPrice.compareTo(a.discountedPrice),
+        );
       } else if (sortBy == 'Discount') {
-        filteredVendorCards.sort((a, b) => b.discountPercent.compareTo(a.discountPercent));
+        filteredVendorCards.sort(
+          (a, b) => b.discountPercent.compareTo(a.discountPercent),
+        );
       }
     });
   }
@@ -180,7 +191,7 @@ class _VendorListPageState extends State<VendorListPage> {
   void _showServiceTagsDialog() {
     // Create a local copy of selected tags for the dialog
     List<String> tempSelectedTags = List.from(selectedServiceTags);
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -301,7 +312,7 @@ class _VendorListPageState extends State<VendorListPage> {
   void _showQualityTagsDialog() {
     // Create a local copy of selected tags for the dialog
     List<String> tempSelectedTags = List.from(selectedQualityTags);
-    
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -436,183 +447,197 @@ class _VendorListPageState extends State<VendorListPage> {
       body: isLoading
           ? Center(child: CircularProgressIndicator(color: Color(0xff0c1c2c)))
           : errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                  SizedBox(height: 16),
+                  Text(
+                    'Error loading vendors',
+                    style: GoogleFonts.urbanist(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 32),
+                    child: Text(
+                      errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.urbanist(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadVendorCards,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xff0c1c2c),
+                    ),
+                    child: Text(
+                      'Retry',
+                      style: GoogleFonts.urbanist(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                // Filter chips
+                Container(
+                  width: double.infinity,
+                  color: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip(
+                          label: 'Sort',
+                          icon: Icons.sort,
+                          onTap: _showSortDialog,
+                        ),
+                        SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'City',
+                          icon: Icons.location_city,
+                          onTap: _showCityDialog,
+                        ),
+                        SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'Services',
+                          icon: Icons.camera_alt,
+                          isSelected: selectedServiceTags.isNotEmpty,
+                          onTap: _showServiceTagsDialog,
+                        ),
+                        SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'Quality',
+                          icon: Icons.verified,
+                          isSelected: selectedQualityTags.isNotEmpty,
+                          onTap: _showQualityTagsDialog,
+                        ),
+                        SizedBox(width: 8),
+                        _buildFilterChip(
+                          label: 'Budget',
+                          icon: Icons.currency_rupee,
+                          onTap: _showBudgetDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Results count
+                Container(
+                  color: Colors.white,
+                  padding: EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    bottom: 8,
+                    top: 4,
+                  ),
+                  child: Row(
                     children: [
-                      Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
-                      SizedBox(height: 16),
                       Text(
-                        'Error loading vendors',
+                        '${filteredVendorCards.length} vendors found',
                         style: GoogleFonts.urbanist(
-                          fontSize: 18,
+                          fontSize: 14,
                           color: Colors.grey[600],
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 32),
-                        child: Text(
-                          errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.urbanist(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadVendorCards,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xff0c1c2c),
-                        ),
-                        child: Text(
-                          'Retry',
-                          style: GoogleFonts.urbanist(color: Colors.white),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                )
-              : Column(
-        children: [
-          // Filter chips
-          Container(
-            width: double.infinity,
-            color: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildFilterChip(
-                    label: 'Sort',
-                    icon: Icons.sort,
-                    onTap: _showSortDialog,
-                  ),
-                  SizedBox(width: 8),
-                  _buildFilterChip(
-                    label: 'City',
-                    icon: Icons.location_city,
-                    onTap: _showCityDialog,
-                  ),
-                  SizedBox(width: 8),
-                  _buildFilterChip(
-                    label: 'Services',
-                    icon: Icons.camera_alt,
-                    isSelected: selectedServiceTags.isNotEmpty,
-                    onTap: _showServiceTagsDialog,
-                  ),
-                  SizedBox(width: 8),
-                  _buildFilterChip(
-                    label: 'Quality',
-                    icon: Icons.verified,
-                    isSelected: selectedQualityTags.isNotEmpty,
-                    onTap: _showQualityTagsDialog,
-                  ),
-                  SizedBox(width: 8),
-                  _buildFilterChip(
-                    label: 'Budget',
-                    icon: Icons.currency_rupee,
-                    onTap: _showBudgetDialog,
-                  ),
-                ],
-              ),
-            ),
-          ),
+                ),
 
-          // Results count
-          Container(
-            color: Colors.white,
-            padding: EdgeInsets.only(left: 16, right: 16, bottom: 8, top: 4),
-            child: Row(
-              children: [
-                Text(
-                  '${filteredVendorCards.length} vendors found',
-                  style: GoogleFonts.urbanist(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
+                // Vendor list
+                Expanded(
+                  child: filteredVendorCards.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'No vendors found',
+                                style: GoogleFonts.urbanist(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Try adjusting your filters',
+                                style: GoogleFonts.urbanist(
+                                  fontSize: 14,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.only(top: 8, bottom: 16),
+                          itemCount: filteredVendorCards.length,
+                          itemBuilder: (context, index) {
+                            final card = filteredVendorCards[index];
+                            return VendorTile(
+                              studioName: card.studioName,
+                              serviceType: card.serviceTags.isNotEmpty
+                                  ? card.serviceTags.first
+                                  : '',
+                              rating:
+                                  4.5, // Default since we don't have rating in vendor_cards yet
+                              reviewCount: 0, // Default
+                              startingPrice: card.formattedDiscountedPrice,
+                              originalPrice: card.formattedOriginalPrice,
+                              discountPercent: card.discountPercent,
+                              imageFileName: card.imagePath,
+                              location: card.city,
+                              serviceTags: card.serviceTags,
+                              qualityTags: card.qualityTags,
+                              onViewProfile: () {
+                                // Convert VendorCard to Map format for VendorProfilePage
+                                final vendorData = {
+                                  'studio_name': card.studioName,
+                                  'city': card.city,
+                                  'image_path': card.imagePath,
+                                  'service_tags': card.serviceTags,
+                                  'quality_tags': card.qualityTags,
+                                  'original_price': card.originalPrice,
+                                  'discounted_price': card.discountedPrice,
+                                  'rating': 4.5,
+                                  'reviewCount': 0,
+                                };
+
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => VendorProfilePage(
+                                      vendorData: vendorData,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
-          ),
-
-          // Vendor list
-          Expanded(
-            child: filteredVendorCards.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-                        SizedBox(height: 16),
-                        Text(
-                          'No vendors found',
-                          style: GoogleFonts.urbanist(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Try adjusting your filters',
-                          style: GoogleFonts.urbanist(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.only(top: 8, bottom: 16),
-                    itemCount: filteredVendorCards.length,
-                    itemBuilder: (context, index) {
-                      final card = filteredVendorCards[index];
-                      return VendorTile(
-                        studioName: card.studioName,
-                        serviceType: card.serviceTags.isNotEmpty ? card.serviceTags.first : '',
-                        rating: 4.5, // Default since we don't have rating in vendor_cards yet
-                        reviewCount: 0, // Default
-                        startingPrice: card.formattedDiscountedPrice,
-                        originalPrice: card.formattedOriginalPrice,
-                        discountPercent: card.discountPercent,
-                        imageFileName: card.imagePath,
-                        location: card.city,
-                        serviceTags: card.serviceTags,
-                        qualityTags: card.qualityTags,
-                        onViewProfile: () {
-                          // Convert VendorCard to Map format for VendorProfilePage
-                          final vendorData = {
-                            'studio_name': card.studioName,
-                            'city': card.city,
-                            'image_path': card.imagePath,
-                            'service_tags': card.serviceTags,
-                            'quality_tags': card.qualityTags,
-                            'original_price': card.originalPrice,
-                            'discounted_price': card.discountedPrice,
-                            'rating': 4.5,
-                            'reviewCount': 0,
-                          };
-                          
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => VendorProfilePage(vendorData: vendorData),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
     );
   }
 
