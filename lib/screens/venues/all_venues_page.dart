@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/venue_models.dart';
-import '../components/venue_category_tile.dart';
+import '../../models/venue_models.dart';
+import '../../components/venue_category_tile.dart';
 import 'venue_category_list_page.dart';
 
 /// All Venues Page - Shows all venue categories in a grid

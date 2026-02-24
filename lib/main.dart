@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/signup_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
-import 'screens/home/home_screen.dart';
+import 'screens/navigation/main_navigation.dart';
+import 'screens/welcome/welcome_page.dart';
+import 'screens/home/home_page.dart';
 import 'screens/bookings/bookings_screen.dart';
-import 'screens/history/history_screen.dart';
-import 'screens/profile/profile_screen.dart';
+import 'screens/history/history_page.dart';
+import 'screens/profile/profile_page.dart';
 import 'screens/booking/book_package_screen.dart';
 import 'screens/booking/book_service_screen.dart';
 import 'screens/packages/filter_package_list_screen.dart';
-import 'pages/main_navigation.dart';
-import 'pages/vendor_categories_page.dart';
-import 'pages/welcome_page.dart';
-import 'pages/customize_package_page.dart';
-import 'pages/coordination_service_page.dart';
+import 'screens/packages/customize_package_page.dart';
+import 'screens/services/coordination_service_page.dart';
+import 'screens/vendors/vendor_categories_page.dart';
 import 'utils/constants.dart';
 
 void main() async {
@@ -48,16 +50,17 @@ class DreamVentzApp extends StatelessWidget {
         AppConstants.forgotPasswordRoute: (context) =>
             const ForgotPasswordScreen(),
         AppConstants.homeRoute: (context) => const MainNavigation(),
-        '/homepage': (context) => const HomeScreen(),
+        '/homepage': (context) => const HomePage(),
         '/bookingspage': (context) => const BookingsScreen(),
-        '/historypage': (context) => const HistoryScreen(),
-        '/profilepage': (context) => const ProfileScreen(),
+        '/historypage': (context) => const HistoryPage(),
+        '/profilepage': (context) => const ProfilePage(),
         '/bookpackage': (context) => const BookPackageScreen(),
         '/bookservice': (context) => const BookServiceScreen(),
         '/vendorcategories': (context) => const VendorCategoriesPage(),
         '/packages': (context) => const FilterPackageListScreen(),
         '/customize_package_page': (context) => const CustomizePackagePage(),
-        '/coordination_service_page': (context) => const CoordinationServicePage(),
+        '/coordination_service_page': (context) =>
+            const CoordinationServicePage(),
       },
     );
   }

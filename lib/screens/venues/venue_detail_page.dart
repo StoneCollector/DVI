@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../models/venue_models.dart';
+import '../../models/venue_models.dart';
 
 /// Detailed venue page showing all venue information
 class VenueDetailPage extends StatefulWidget {
@@ -26,7 +26,8 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
     if (widget.venue.galleryImages.isNotEmpty) {
       _autoScrollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
         if (_pageController.hasClients) {
-          final nextPage = (_currentImageIndex + 1) % widget.venue.galleryImages.length;
+          final nextPage =
+              (_currentImageIndex + 1) % widget.venue.galleryImages.length;
           _pageController.animateToPage(
             nextPage,
             duration: const Duration(milliseconds: 400),
@@ -61,11 +62,14 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
                 _buildVenueHeader(),
                 _buildLocationSection(),
                 _buildVendorContactSection(),
-                if (widget.venue.description != null && widget.venue.description!.isNotEmpty)
+                if (widget.venue.description != null &&
+                    widget.venue.description!.isNotEmpty)
                   _buildDescriptionSection(),
                 if (widget.venue.services.isNotEmpty) _buildServicesSection(),
-                if (widget.venue.galleryImages.length > 1) _buildGallerySection(),
-                if (widget.venue.policies != null && widget.venue.policies!.isNotEmpty)
+                if (widget.venue.galleryImages.length > 1)
+                  _buildGallerySection(),
+                if (widget.venue.policies != null &&
+                    widget.venue.policies!.isNotEmpty)
                   _buildPoliciesSection(),
                 _buildBookingStepsSection(),
                 const SizedBox(height: 100), // Space for bottom button
@@ -350,17 +354,22 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
               ],
             ),
           ),
-          if (widget.venue.locationAddress != null && widget.venue.locationAddress!.isNotEmpty)
+          if (widget.venue.locationAddress != null &&
+              widget.venue.locationAddress!.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.directions, color: Color(0xff0c1c2c)),
               onPressed: () async {
-                final address = Uri.encodeComponent(widget.venue.locationAddress!);
+                final address = Uri.encodeComponent(
+                  widget.venue.locationAddress!,
+                );
                 final url = Uri.parse('geo:0,0?q=$address');
                 try {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 } catch (e) {
                   // Fallback to web URL if geo: scheme fails
-                  final webUrl = Uri.parse('https://www.google.com/maps/search/?api=1&query=$address');
+                  final webUrl = Uri.parse(
+                    'https://www.google.com/maps/search/?api=1&query=$address',
+                  );
                   await launchUrl(webUrl, mode: LaunchMode.externalApplication);
                 }
               },
@@ -612,10 +621,7 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            const Color(0xff0c1c2c).withOpacity(0.05),
-            Colors.blue[50]!,
-          ],
+          colors: [const Color(0xff0c1c2c).withOpacity(0.05), Colors.blue[50]!],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -636,7 +642,8 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
           _buildBookingStep(
             number: '1',
             title: 'Contact Vendor',
-            description: 'Reach out via phone or email to discuss your requirements',
+            description:
+                'Reach out via phone or email to discuss your requirements',
             color: Colors.blue,
           ),
           _buildBookingStep(
@@ -669,10 +676,7 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
           width: 40,
           height: 40,
           margin: const EdgeInsets.only(right: 16, bottom: 16),
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           child: Center(
             child: Text(
               number,
@@ -720,10 +724,7 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [
-            Color(0xFFF3E5F5),
-            Color(0xFFFFE6F0),
-          ],
+          colors: [Color(0xFFF3E5F5), Color(0xFFFFE6F0)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -804,7 +805,8 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
               },
             ),
 
-          if (widget.venue.uploaderEmail != null && widget.venue.uploaderPhone != null)
+          if (widget.venue.uploaderEmail != null &&
+              widget.venue.uploaderPhone != null)
             const SizedBox(height: 12),
 
           // Phone

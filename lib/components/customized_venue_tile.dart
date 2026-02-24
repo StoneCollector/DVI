@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/models/venue_models.dart';
-import 'package:dreamventz/pages/venue_detail_page.dart';
+import 'package:dreamventz/screens/venues/venue_detail_page.dart';
 
 class CustomizedVenueTile extends StatelessWidget {
   final VenueData venue;
@@ -16,10 +16,7 @@ class CustomizedVenueTile extends StatelessWidget {
   });
 
   String formatCurrency(double value) {
-    return '₹${value.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    )}';
+    return '₹${value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
   }
 
   @override
@@ -30,7 +27,9 @@ class CustomizedVenueTile extends StatelessWidget {
         margin: EdgeInsets.only(bottom: 8, top: 8),
         padding: EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: isSelected ? Color(0xff0c1c2c).withValues(alpha: 0.05) : Colors.white,
+          color: isSelected
+              ? Color(0xff0c1c2c).withValues(alpha: 0.05)
+              : Colors.white,
           border: Border.all(
             color: isSelected ? Color(0xff0c1c2c) : Colors.grey[300]!,
             width: isSelected ? 1.5 : 1,
@@ -63,7 +62,7 @@ class CustomizedVenueTile extends StatelessWidget {
                     ),
             ),
             SizedBox(width: 10),
-            
+
             // Details
             Expanded(
               child: Column(
@@ -80,7 +79,7 @@ class CustomizedVenueTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 3),
-                  
+
                   // Location
                   Row(
                     children: [
@@ -100,7 +99,7 @@ class CustomizedVenueTile extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 8),
-                  
+
                   // Price and View Details Button
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -114,21 +113,25 @@ class CustomizedVenueTile extends StatelessWidget {
                           color: Color(0xFF9C27B0),
                         ),
                       ),
-                      
+
                       // View Details Button
                       ElevatedButton(
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => VenueDetailPage(venue: venue),
+                              builder: (context) =>
+                                  VenueDetailPage(venue: venue),
                             ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color(0xFF9C27B0),
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           minimumSize: Size(0, 0),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           shape: RoundedRectangleBorder(
@@ -149,16 +152,12 @@ class CustomizedVenueTile extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Selection indicator
             if (isSelected)
               Padding(
                 padding: EdgeInsets.only(left: 8),
-                child: Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                  size: 28,
-                ),
+                child: Icon(Icons.check_circle, color: Colors.green, size: 28),
               ),
           ],
         ),
