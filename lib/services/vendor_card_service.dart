@@ -5,6 +5,23 @@ import 'package:dreamventz/utils/supabase_config.dart';
 class VendorCardService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  // Fetch all vendor cards across categories
+  Future<List<VendorCard>> getAllVendorCards() async {
+    try {
+      final response = await _supabase
+          .from('vendor_cards')
+          .select()
+          .order('created_at', ascending: false);
+
+      return (response as List)
+          .map((json) => VendorCard.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('Error fetching all vendor cards: $e');
+      rethrow;
+    }
+  }
+
   // Fetch vendor cards by category
   Future<List<VendorCard>> getVendorCardsByCategory(int categoryId) async {
     try {
@@ -56,7 +73,7 @@ class VendorCardService {
         final tags = List<String>.from(item['service_tags'] ?? []);
         allTags.addAll(tags);
       }
-      
+
       final tagList = allTags.toList();
       tagList.sort();
       return tagList;
@@ -79,7 +96,7 @@ class VendorCardService {
         final tags = List<String>.from(item['quality_tags'] ?? []);
         allTags.addAll(tags);
       }
-      
+
       final tagList = allTags.toList();
       tagList.sort();
       return tagList;
