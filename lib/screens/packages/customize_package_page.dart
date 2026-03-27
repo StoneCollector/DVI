@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dreamventz/models/venue_models.dart';
 import 'package:dreamventz/services/venue_service.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
-import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:dreamventz/config/supabase_config.dart';
 import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 import 'package:dreamventz/components/customized_vendor_tile.dart';
 import 'package:dreamventz/components/customized_venue_tile.dart';

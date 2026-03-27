@@ -107,4 +107,16 @@ class SupabaseConfig {
       return false;
     }
   }
+
+  // --- Restored properties from prior refactoring ---
+  static String get projectUrl => dotenv.env['SUPABASE_URL'] ?? '';
+  static String get vendorImagesBucket => 'vendors';
+
+  static String getImageUrl(String path) {
+    return '$projectUrl/storage/v1/object/public/carasol/$path';
+  }
+
+  static String getVendorImageUrl(String path) {
+    return '$projectUrl/storage/v1/object/public/vendors/$path';
+  }
 }

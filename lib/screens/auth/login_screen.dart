@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_service.dart';
 import '../../utils/constants.dart';
 import '../../utils/validators.dart';
+import '../../components/oauth_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,6 +47,76 @@ class _LoginScreenState extends State<LoginScreen> {
         _rememberMe = true;
         _emailController.text = savedEmail;
       });
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      setState(() => _isLoading = true);
+      debugPrint('🔑 Launching Google Sign-In...');
+      await _authService.signInWithGoogle();
+      debugPrint('🔙 Back from Google Sign-In! Starting 10s session polling...');
+      
+      // Polling fallback for PKCE redirect exchange
+      for (int i = 0; i < 20; i++) { // 10 seconds total (0.5s x 20)
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+        
+        if (Supabase.instance.client.auth.currentSession != null) {
+          debugPrint('✅ Polling: Session found! Navigating to Home...');
+          Navigator.pushNamedAndRemoveUntil(context, AppConstants.homeRoute, (route) => false);
+          return;
+        }
+      }
+      
+      debugPrint('⚠️ Polling: No session found after 10 seconds.');
+      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text("Google Sign-In failed: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleFacebookSignIn() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      setState(() => _isLoading = true);
+      debugPrint('🔑 Launching Facebook Sign-In...');
+      await _authService.signInWithFacebook();
+      debugPrint('🔙 Back from Facebook Sign-In! Starting 10s session polling...');
+      
+      // Polling fallback
+      for (int i = 0; i < 20; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+        
+        if (Supabase.instance.client.auth.currentSession != null) {
+          debugPrint('✅ Polling: Session found! Navigating to Home...');
+          Navigator.pushNamedAndRemoveUntil(context, AppConstants.homeRoute, (route) => false);
+          return;
+        }
+      }
+
+      debugPrint('⚠️ Polling: No session found after 10 seconds.');
+      if (mounted) setState(() => _isLoading = false);
+    } catch (e) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text("Facebook Sign-In failed: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -241,6 +313,39 @@ class _LoginScreenState extends State<LoginScreen> {
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           children: [
+                            // OAuth Buttons
+                            OAuthButton(
+                              provider: 'google',
+                              isLoading: _isLoading,
+                              onPressed: _handleGoogleSignIn,
+                            ),
+                            const SizedBox(height: 12),
+                            OAuthButton(
+                              provider: 'facebook',
+                              isLoading: _isLoading,
+                              onPressed: _handleFacebookSignIn,
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Divider
+                            Row(
+                              children: [
+                                Expanded(child: Divider(color: Colors.grey[700])),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    'OR',
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(child: Divider(color: Colors.grey[700])),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
                             // Email Field
                             _buildTextField(
                               label: "Email Address",

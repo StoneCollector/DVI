@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -77,17 +78,54 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  late final StreamSubscription<AuthState> _authSubscription;
   bool _isChecking = true;
 
   @override
   void initState() {
     super.initState();
-    _checkAuthState();
+    _checkInitialSession();
+    _setupAuthListener();
   }
 
-  Future<void> _checkAuthState() async {
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    super.dispose();
+  }
+
+  void _setupAuthListener() {
+    debugPrint('🕒 Setting up Auth Listener...');
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
+      
+      debugPrint('🔔 Auth State Change: $event (Session: ${session != null ? "active" : "null"})');
+      
+      if (mounted) {
+        // Handle any case where we have a session and should be on the home page
+        if (session != null && (
+            event == AuthChangeEvent.signedIn || 
+            event == AuthChangeEvent.initialSession || 
+            event == AuthChangeEvent.tokenRefreshed)) {
+          
+          debugPrint('🚀 Auth condition met! Event: $event. Navigating to Home...');
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppConstants.homeRoute,
+            (route) => false,
+          );
+        }
+      }
+    });
+  }
+
+  Future<void> _checkInitialSession() async {
     // Wait a moment for any existing session to be restored
     await Future.delayed(const Duration(milliseconds: 500));
+    
+    final session = Supabase.instance.client.auth.currentSession;
+    debugPrint('🧐 Initial Session Check: ${session != null ? "Authenticated" : "Not Authenticated"}');
 
     if (mounted) {
       setState(() => _isChecking = false);
@@ -102,16 +140,16 @@ class _AuthWrapperState extends State<AuthWrapper> {
     }
 
     // Navigate based on auth state
-    // If user is authenticated, go to home, otherwise login
-    // Use try-catch to handle potential Supabase initialization failures
     try {
       if (SupabaseConfig.isAuthenticated) {
+        debugPrint('🏠 AuthWrapper: User is authenticated, showing MainNavigation');
         return const MainNavigation();
       }
     } catch (e) {
       debugPrint('Error checking auth state: $e');
     }
 
+    debugPrint('👋 AuthWrapper: User not authenticated, showing WelcomePage');
     return const WelcomePage();
   }
 }

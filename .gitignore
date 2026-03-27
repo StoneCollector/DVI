@@ -12,6 +12,9 @@
 .swiftpm/
 migrate_working_dir/
 
+patch.py
+patch_auth.py
+
 # IntelliJ related
 *.iml
 *.ipr

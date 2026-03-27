@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:dreamventz/config/supabase_config.dart';
 import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 
 class CustomizedVendorTile extends StatelessWidget {

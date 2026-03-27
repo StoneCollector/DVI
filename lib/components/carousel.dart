@@ -1,18 +1,18 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:dreamventz/config/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-class Carasol extends StatefulWidget {
-  const Carasol({super.key});
+class Carousel extends StatefulWidget {
+  const Carousel({super.key});
 
   @override
-  State<Carasol> createState() => _CarasolState();
+  State<Carousel> createState() => _CarouselState();
 }
 
-class _CarasolState extends State<Carasol> with SingleTickerProviderStateMixin {
+class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> carouselData = [];
   bool isLoading = true;
 

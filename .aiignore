@@ -1,0 +1,28 @@
+# Build and generated files
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+*.g.dart
+*.freezed.dart
+
+# Platform specific generated/build files
+android/.gradle/
+android/app/build/
+ios/Pods/
+ios/.symlinks/
+linux/flutter/ephemeral/
+macos/Flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# IDE and environmental
+.idea/
+.vscode/
+*.iml
+.env
+.env.development
+.env.production
+
+# Version control
+.git/
