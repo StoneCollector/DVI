@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/carasol.dart';
+import 'package:dreamventz/components/searchbar.dart';
 import 'package:dreamventz/components/services_tile.dart';
 import 'package:dreamventz/components/trending_tile.dart';
+import 'package:dreamventz/models/vendor_card.dart';
 import 'package:dreamventz/screens/vendors/vendor_list_page.dart';
+import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 import 'package:dreamventz/screens/profile/user_profile_page.dart';
 import 'package:dreamventz/screens/venues/venue_detail_page.dart';
 import 'package:dreamventz/screens/venues/all_venues_page.dart';
+import 'package:dreamventz/services/vendor_card_service.dart';
 import 'package:dreamventz/services/venue_service.dart';
 import 'package:dreamventz/models/venue_models.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,11 +29,25 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with AutomaticKeepAliveClientMixin {
   List<Map<String, dynamic>> trendingPackages = [];
+  List<VendorCard> allVendorCards = [];
   bool isLoading = true;
   String userName = 'User';
   bool isLoadingUser = true;
+  bool isLoadingVendorsForSearch = true;
   static const String _cacheKey = 'trending_packages_cache';
   static const String _cacheTimeKey = 'trending_packages_cache_time';
+
+  static const List<Map<String, dynamic>> _serviceCategories = [
+    {'label': 'Photography', 'categoryName': 'Photography', 'categoryId': 1},
+    {'label': 'Catering', 'categoryName': 'Caterers', 'categoryId': 4},
+    {'label': 'DJ & Bands', 'categoryName': 'DJ & Bands', 'categoryId': 5},
+    {'label': 'Decoraters', 'categoryName': 'Decoraters', 'categoryId': 6},
+    {
+      'label': 'Mehndi Artist',
+      'categoryName': 'Mehndi Artist',
+      'categoryId': 2,
+    },
+  ];
 
   // Venues data
   Map<String, List<VenueData>> venuesByCategory = {};
@@ -50,6 +68,7 @@ class _HomePageState extends State<HomePage>
     _fetchUserProfile();
     _loadCachedData();
     _fetchVenues();
+    _fetchAllVendorsForSearch();
   }
 
   Future<void> _fetchUserProfile() async {
@@ -147,6 +166,7 @@ class _HomePageState extends State<HomePage>
     await Future.wait([
       _fetchTrendingPackages(),
       _fetchVenues(),
+      _fetchAllVendorsForSearch(),
       Future.delayed(
         Duration(milliseconds: 500),
       ), // Minimum refresh time for better UX
@@ -169,6 +189,90 @@ class _HomePageState extends State<HomePage>
         isLoadingVenues = false;
       });
     }
+  }
+
+  Future<void> _fetchAllVendorsForSearch() async {
+    setState(() {
+      isLoadingVendorsForSearch = true;
+    });
+
+    final vendorService = VendorCardService();
+
+    try {
+      var vendors = await vendorService.getAllVendorCards();
+
+      if (vendors.isEmpty) {
+        vendors = await _fetchVendorsByKnownCategories(vendorService);
+      }
+
+      setState(() {
+        allVendorCards = vendors;
+        isLoadingVendorsForSearch = false;
+      });
+    } catch (e) {
+      print(
+        'Error fetching all vendors for search, trying category fallback: $e',
+      );
+
+      try {
+        final fallbackVendors = await _fetchVendorsByKnownCategories(
+          vendorService,
+        );
+        setState(() {
+          allVendorCards = fallbackVendors;
+          isLoadingVendorsForSearch = false;
+        });
+      } catch (fallbackError) {
+        print('Error fetching fallback vendors for search: $fallbackError');
+        setState(() {
+          allVendorCards = [];
+          isLoadingVendorsForSearch = false;
+        });
+      }
+    }
+  }
+
+  Future<List<VendorCard>> _fetchVendorsByKnownCategories(
+    VendorCardService vendorService,
+  ) async {
+    final categoryIds = _serviceCategories
+        .map((c) => c['categoryId'])
+        .whereType<int>()
+        .toList();
+
+    final vendorLists = await Future.wait(
+      categoryIds.map(vendorService.getVendorCardsByCategory),
+    );
+
+    final vendorById = <String, VendorCard>{};
+    for (final vendors in vendorLists) {
+      for (final vendor in vendors) {
+        vendorById[vendor.id] = vendor;
+      }
+    }
+
+    return vendorById.values.toList();
+  }
+
+  void _openVendorSearchResult(VendorCard vendor) {
+    final vendorData = {
+      'studio_name': vendor.studioName,
+      'city': vendor.city,
+      'image_path': vendor.imagePath,
+      'service_tags': vendor.serviceTags,
+      'quality_tags': vendor.qualityTags,
+      'original_price': vendor.originalPrice,
+      'discounted_price': vendor.discountedPrice,
+      'rating': 4.5,
+      'reviewCount': 0,
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VendorProfilePage(vendorData: vendorData),
+      ),
+    );
   }
 
   void _startAutoScroll() {
@@ -362,34 +466,36 @@ class _HomePageState extends State<HomePage>
 
               SizedBox(height: 20),
 
-              // Search Bar (One UI Style)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20),
-                  height: 55,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100], // Flat light grey
-                    borderRadius: BorderRadius.circular(30), // Pill shape
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.search, color: Colors.grey[600], size: 26),
-                      SizedBox(width: 15),
-                      Text(
-                        "Search packages, services...",
-                        style: GoogleFonts.urbanist(
-                          color: Colors.grey[500],
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+              HomeSearchBar(
+                serviceCategories: _serviceCategories,
+                trendingPackages: trendingPackages,
+                venuesByCategory: venuesByCategory,
+                vendors: allVendorCards,
+                isLoadingVendors: isLoadingVendorsForSearch,
+                onCategoryTap: (data) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VendorListPage(
+                        categoryName: data['categoryName'] as String,
+                        categoryId: data['categoryId'] as int,
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
+                onPackageTap: (_) {
+                  Navigator.pushNamed(context, '/bookpackage');
+                },
+                onVenueTap: (venue) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VenueDetailPage(venue: venue),
+                    ),
+                  );
+                },
+                onVendorTap: _openVendorSearchResult,
               ),
-
-              SizedBox(height: 25),
 
               //hero
               Padding(
