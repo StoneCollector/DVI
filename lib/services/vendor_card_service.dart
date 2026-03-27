@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dreamventz/models/vendor_card.dart';
-import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:dreamventz/config/supabase_config.dart';
 
 class VendorCardService {
   final SupabaseClient _supabase = Supabase.instance.client;

@@ -1,0 +1,16 @@
+# Performance Report & Change Log
+> AI INSTRUCTION: During every session, you MUST document all POSITIVE architectural, UI, and feature changes made to the project in this file. 
+> Do NOT document bug fixes or corrections to things broken during the current session.
+> Format changes under dated sections (e.g., `## March 27, 2026`). 
+> Keep descriptions concise but technical.
+
+## March 27, 2026
+- **Environment Configuration**: Migrated Supabase credentials (`SUPABASE_URL` and `SUPABASE_ANON_KEY`) to a secure `.env` file instead of hardcoding them in `supabase_config.dart`.
+- **Typo Correction**: Renamed `carasol.dart` to `carousel.dart` and corrected all internal class references (`Carasol` to `Carousel`), while carefully preserving external bucket references to maintain backend compatibility.
+- **Architectural Refactor (God Class Decomposition)**: Decomposed the monolithic `home_page.dart` (1100+ lines) into modular components: `HomeHeader`, `HomeCategoriesSection`, `PromotionalBanners`, `PopularVenuesSection`, and `TrendingPackagesSection`.
+- **State Management Optimization**: Scoped the complex auto-scroll animation logic from `home_page.dart` down into its native component (`TrendingPackagesSection`), significantly reducing unnecessary re-renders in the parent screen.
+- **Dynamic Profile Avatars**: Refactored the Supabase query on `home_page.dart` to query `avatar_url` from the user table, propagating state down to dynamically render profile avatars.
+- **Social Auth Porting**: Extracted the custom `OAuthButton` and the `signInWithGoogle` / `signInWithFacebook` Supabase methods from the vendor application and ported them into the main user application (`dreamventz`). Seamlessly injected these components into `login_screen.dart` and `signup_screen.dart` using identical form logic and dark theme styling.
+- **Deep Link Customization**: Implemented a unique deep link scheme (`io.supabase.dreamventz`) for both Android and iOS to prevent system-level redirect collisions with the vendor application. 
+- **Global Auth State Listener**: Added a central `onAuthStateChange` listener in `main.dart` with `StreamSubscription` to handle automatic, real-time navigation from authentication screens to the home dashboard.
+- **UI Layout Optimization**: Implemented `SafeArea` and `SingleChildScrollView` enhancements in `signup_screen.dart` to resolve logo-overlap issues and ensure a perfectly centered, scrollable authentication form.

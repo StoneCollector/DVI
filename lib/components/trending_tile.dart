@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dreamventz/utils/supabase_config.dart';
+import 'package:dreamventz/config/supabase_config.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class TrendingTile extends StatelessWidget {
@@ -49,13 +49,13 @@ class TrendingTile extends StatelessWidget {
                 ),
                 child: Image.network(
                   SupabaseConfig.getImageUrl(imageFileName),
-                  height: 130, // Increased from 100
+                  height: 110, // Reduced from 130 to prevent overflow
                   width: 260,
                   fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return Container(
-                      height: 130,
+                      height: 110,
                       color: Colors.grey[300],
                       child: Center(child: CircularProgressIndicator()),
                     );

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -831,6 +832,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(6),
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Pin Code',
                       labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
@@ -990,6 +995,10 @@ class _UserProfilePageState extends State<UserProfilePage>
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(2),
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Age',
                       labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
