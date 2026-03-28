@@ -108,15 +108,46 @@ class SupabaseConfig {
     }
   }
 
-  // --- Restored properties from prior refactoring ---
-  static String get projectUrl => dotenv.env['SUPABASE_URL'] ?? '';
-  static String get vendorImagesBucket => 'vendors';
+  // --- Storage Bucket Constants ---
+  static const String BUCKET_CAROUSEL = 'carasol'; // For categories & carousel items
+  static const String BUCKET_VENDORS = 'vendor_card'; // For vendor cards
+  static const String BUCKET_VENUES = 'venue_images'; // For venue data
+  static const String BUCKET_COORDINATION =
+      'coordination_services'; // For coordination services
 
+  /// Get a public URL for a file in a storage bucket.
+  /// Handles both full URLs and relative paths/filenames.
+  static String getPublicUrl(String bucket, String? path) {
+    if (path == null || path.isEmpty) return '';
+
+    // If the path is already a full URL, return it as is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+
+    // Otherwise, construct the URL using the Supabase storage API
+    try {
+      return Supabase.instance.client.storage.from(bucket).getPublicUrl(path);
+    } catch (e) {
+      debugPrint('Error generating public URL for $bucket/$path: $e');
+      // Fallback to manual construction if client fails (rare)
+      return '${dotenv.env['SUPABASE_URL']}/storage/v1/object/public/$bucket/$path';
+    }
+  }
+
+  /// Old property for vendor images bucket (mapped to BUCKET_VENDORS)
+  static String get vendorImagesBucket => BUCKET_VENDORS;
+
+  /// Legacy helper for carousel/category images (now using getPublicUrl)
   static String getImageUrl(String path) {
-    return '$projectUrl/storage/v1/object/public/carasol/$path';
+    return getPublicUrl(BUCKET_CAROUSEL, path);
   }
 
+  /// Legacy helper for vendor images (now using getPublicUrl)
   static String getVendorImageUrl(String path) {
-    return '$projectUrl/storage/v1/object/public/vendors/$path';
+    return getPublicUrl(BUCKET_VENDORS, path);
   }
+
+  /// Get project URL from env
+  static String get projectUrl => dotenv.env['SUPABASE_URL'] ?? '';
 }

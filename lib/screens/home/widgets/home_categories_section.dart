@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:dreamventz/components/services_tile.dart';
+import 'package:dreamventz/components/home_category_tile.dart';
 import 'package:dreamventz/screens/vendors/vendor_list_page.dart';
 
 class HomeCategoriesSection extends StatelessWidget {
-  const HomeCategoriesSection({super.key});
+  final List<Map<String, dynamic>> categories;
+  final bool isLoading;
+
+  const HomeCategoriesSection({
+    super.key,
+    required this.categories,
+    required this.isLoading,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(
-            left: 15.0,
-            right: 3,
-            bottom: 2,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 15.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -28,8 +31,7 @@ class HomeCategoriesSection extends StatelessWidget {
                 ),
               ),
               GestureDetector(
-                onTap: () =>
-                    Navigator.pushNamed(context, '/vendorcategories'),
+                onTap: () => Navigator.pushNamed(context, '/vendorcategories'),
                 child: Row(
                   children: [
                     Text(
@@ -51,96 +53,56 @@ class HomeCategoriesSection extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 15),
         SizedBox(
-          height: 90,
-          child: ListView(
-            clipBehavior: Clip.none,
-            physics: const BouncingScrollPhysics(),
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 15.0),
-            children: [
-              ServicesTile(
-                icon: Icons.camera_alt,
-                label: " Photography ",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => VendorListPage(
-                        categoryName: 'Photography',
-                        categoryId: 1,
+          height: 105, // Slightly increased to fit circular tiles + text
+          child: isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(color: Color(0xff0c1c2c)),
+                )
+              : categories.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No categories found',
+                        style: GoogleFonts.urbanist(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
                       ),
+                    )
+                  : ListView.builder(
+                      clipBehavior: Clip.none,
+                      physics: const BouncingScrollPhysics(),
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                      itemCount: categories.length,
+                      itemBuilder: (context, index) {
+                        final category = categories[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: HomeCategoryTile(
+                            name: category['name'] ?? '',
+                            imageUrl: category['image_url'] ?? '',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => VendorListPage(
+                                    categoryName: category['name'] ?? '',
+                                    categoryId: (category['id'] ?? 0) is int
+                                        ? category['id'] as int
+                                        : int.tryParse(
+                                              '${category['id'] ?? 0}',
+                                            ) ??
+                                            0,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-              ServicesTile(
-                icon: Icons.restaurant,
-                label: "  Catering  ",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => VendorListPage(
-                        categoryName: 'Caterers',
-                        categoryId: 4,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-              ServicesTile(
-                icon: Icons.music_note,
-                label: "   DJ & Bands   ",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => VendorListPage(
-                        categoryName: 'DJ & Bands',
-                        categoryId: 5,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-              ServicesTile(
-                icon: Icons.star,
-                label: "   Decoraters   ",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => VendorListPage(
-                        categoryName: 'Decoraters',
-                        categoryId: 6,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-              ServicesTile(
-                icon: Icons.brush,
-                label: "  Mehndi Artist  ",
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => VendorListPage(
-                        categoryName: 'Mehndi Artist',
-                        categoryId: 2,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 10),
-            ],
-          ),
         ),
       ],
     );

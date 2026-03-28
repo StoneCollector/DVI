@@ -40,11 +40,14 @@ class _HomePageState extends State<HomePage>
   String? avatarUrl;
   bool isLoadingUser = true;
   bool _showProfilePrompt = false;
+  List<Map<String, dynamic>> categories = [];
+  bool isLoadingCategories = true;
   bool isLoadingVendorsForSearch = true;
   static const String _cacheKey = 'trending_packages_cache';
   static const String _cacheTimeKey = 'trending_packages_cache_time';
 
-  static const List<Map<String, dynamic>> _serviceCategories = [
+  // Hardcoded fallback categories for the SearchBar until dynamic categories can be integrated there as well
+  static const List<Map<String, dynamic>> _fallbackCategories = [
     {'label': 'Photography', 'categoryName': 'Photography', 'categoryId': 1},
     {'label': 'Catering', 'categoryName': 'Caterers', 'categoryId': 4},
     {'label': 'DJ & Bands', 'categoryName': 'DJ & Bands', 'categoryId': 5},
@@ -69,6 +72,7 @@ class _HomePageState extends State<HomePage>
     super.initState();
     _fetchUserProfile();
     _loadCachedData();
+    _fetchCategories();
     _fetchVenues();
     _fetchAllVendorsForSearch();
   }
@@ -157,6 +161,29 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  Future<void> _fetchCategories() async {
+    try {
+      final response = await Supabase.instance.client
+          .from('vendor_categories')
+          .select()
+          .order('id');
+
+      if (mounted) {
+        setState(() {
+          categories = List<Map<String, dynamic>>.from(response);
+          isLoadingCategories = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching vendor categories: $e');
+      if (mounted) {
+        setState(() {
+          isLoadingCategories = false;
+        });
+      }
+    }
+  }
+
   Future<void> _fetchTrendingPackages() async {
     try {
       final response = await Supabase.instance.client
@@ -193,6 +220,7 @@ class _HomePageState extends State<HomePage>
 
     await Future.wait([
       _fetchTrendingPackages(),
+      _fetchCategories(),
       _fetchVenues(),
       _fetchAllVendorsForSearch(),
       Future.delayed(
@@ -275,10 +303,10 @@ class _HomePageState extends State<HomePage>
   Future<List<VendorCard>> _fetchVendorsByKnownCategories(
     VendorCardService vendorService,
   ) async {
-    final categoryIds = _serviceCategories
-        .map((c) => c['categoryId'])
-        .whereType<int>()
-        .toList();
+    final categoryIds =
+        (categories.isNotEmpty ? categories : _fallbackCategories)
+            .map((c) => (c['id'] ?? c['categoryId']) as int)
+            .toList();
 
     final vendorLists = await Future.wait(
       categoryIds.map(vendorService.getVendorCardsByCategory),
@@ -439,7 +467,15 @@ class _HomePageState extends State<HomePage>
               _buildProfileCompletionPrompt(),
               const SizedBox(height: 10),
               HomeSearchBar(
-                serviceCategories: _serviceCategories,
+                serviceCategories: categories.isNotEmpty
+                    ? categories
+                        .map((c) => {
+                              'label': c['name'],
+                              'categoryName': c['name'],
+                              'categoryId': c['id']
+                            })
+                        .toList()
+                    : _fallbackCategories,
                 trendingPackages: trendingPackages,
                 venuesByCategory: venuesByCategory,
                 vendors: allVendorCards,
@@ -473,7 +509,10 @@ class _HomePageState extends State<HomePage>
                 child: const Carousel(),
               ),
               const SizedBox(height: 20),
-              const HomeCategoriesSection(),
+              HomeCategoriesSection(
+                categories: categories,
+                isLoading: isLoadingCategories,
+              ),
               const SizedBox(height: 20),
               const PromotionalBanners(),
               const SizedBox(height: 15),
