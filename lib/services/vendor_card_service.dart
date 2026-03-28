@@ -108,6 +108,9 @@ class VendorCardService {
 
   // Get full image URL from storage
   static String getImageUrl(String imagePath) {
-    return '${SupabaseConfig.projectUrl}/storage/v1/object/public/${SupabaseConfig.vendorImagesBucket}/$imagePath';
+    return SupabaseConfig.getPublicUrl(
+      SupabaseConfig.BUCKET_VENDORS,
+      imagePath,
+    );
   }
 }
