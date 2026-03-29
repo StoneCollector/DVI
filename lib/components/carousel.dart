@@ -12,7 +12,8 @@ class Carousel extends StatefulWidget {
   State<Carousel> createState() => _CarouselState();
 }
 
-class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin {
+class _CarouselState extends State<Carousel>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> carouselData = [];
   bool isLoading = true;
 
@@ -37,12 +38,15 @@ class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin
           .select()
           .order('display_order');
 
+      if (!mounted) return;
+
       setState(() {
         carouselData = List<Map<String, dynamic>>.from(response);
         isLoading = false;
       });
     } catch (e) {
-      print('Error fetching carousel data: $e');
+      debugPrint('Error fetching carousel data: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -179,6 +183,7 @@ class _CarouselState extends State<Carousel> with SingleTickerProviderStateMixin
               aspectRatio: 16 / 9,
               viewportFraction: 0.8,
               onPageChanged: (index, reason) {
+                if (!mounted) return;
                 setState(() {
                   _currentIndex = index;
                   _animationController.reset();

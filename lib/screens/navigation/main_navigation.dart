@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dreamventz/screens/cart/cart_page.dart';
 import 'package:dreamventz/screens/home/home_page.dart';
 import 'package:dreamventz/screens/bookings/bookings_page.dart';
 import 'package:dreamventz/screens/history/history_page.dart';
@@ -13,7 +14,12 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [HomePage(), BookingsPage(), HistoryPage()];
+  final List<Widget> _pages = [
+    HomePage(),
+    const CartPage(),
+    BookingsPage(),
+    HistoryPage(),
+  ];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -34,6 +40,10 @@ class _MainNavigationState extends State<MainNavigation> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined),
+            label: 'Cart',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
             label: 'Bookings',
