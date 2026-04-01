@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dreamventz/components/sort.dart';
+import 'package:dreamventz/services/wishlist_service.dart';
 import '../../models/venue_models.dart';
 import 'venue_detail_page.dart';
 
@@ -19,18 +21,113 @@ class VenueCategoryListPage extends StatefulWidget {
 }
 
 class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
+  static const double _budgetStep = 5000;
+
   List<VenueData> filteredVenues = [];
 
   // Filter states
   String sortBy = 'Price: Low to High';
   String selectedCity = 'All';
-  String budgetRange = 'All';
+  double selectedMinBudget = 0;
+  double selectedMaxBudget = 0;
+  double categoryMaxBudget = 0;
+  bool hasBudgetData = false;
+  final WishlistService _wishlistService = WishlistService();
+  Set<String> wishlistedVenueIds = <String>{};
+  Set<String> wishlistBusyVenueIds = <String>{};
+
+  bool get _isBudgetFilterActive {
+    return hasBudgetData &&
+        (selectedMinBudget > 0 || selectedMaxBudget < categoryMaxBudget);
+  }
+
+  double _normalizeMaxBudget(double maxPrice) {
+    if (maxPrice <= 0) return _budgetStep;
+    return (maxPrice / _budgetStep).ceil() * _budgetStep;
+  }
 
   @override
   void initState() {
     super.initState();
+    final rawMaxPrice = widget.venues.isEmpty
+        ? 0.0
+        : widget.venues
+              .map((venue) => venue.discountedVenuePrice)
+              .reduce((a, b) => a > b ? a : b);
+
+    categoryMaxBudget = _normalizeMaxBudget(rawMaxPrice);
+    hasBudgetData = rawMaxPrice > 0;
+    selectedMinBudget = 0;
+    selectedMaxBudget = categoryMaxBudget;
+
     filteredVenues = List.from(widget.venues);
     _applyFilters();
+    _loadWishlistedVenueIds();
+  }
+
+  Future<void> _loadWishlistedVenueIds() async {
+    try {
+      final ids = await _wishlistService.fetchWishlistedVenueIds();
+      if (!mounted) return;
+      setState(() {
+        wishlistedVenueIds = ids;
+      });
+    } catch (_) {
+      // Keep empty state when wishlist cannot be loaded.
+    }
+  }
+
+  Future<void> _toggleVenueWishlist(VenueData venue) async {
+    final venueId = venue.id;
+    if (venueId == null) return;
+    if (wishlistBusyVenueIds.contains(venueId)) return;
+
+    final isCurrentlyWishlisted = wishlistedVenueIds.contains(venueId);
+    setState(() {
+      wishlistBusyVenueIds = {...wishlistBusyVenueIds, venueId};
+      if (isCurrentlyWishlisted) {
+        wishlistedVenueIds = {...wishlistedVenueIds}..remove(venueId);
+      } else {
+        wishlistedVenueIds = {...wishlistedVenueIds, venueId};
+      }
+    });
+
+    try {
+      final nowWishlisted = await _wishlistService.toggleVenue(venueId);
+      if (!mounted) return;
+
+      setState(() {
+        final updated = {...wishlistedVenueIds};
+        if (nowWishlisted) {
+          updated.add(venueId);
+        } else {
+          updated.remove(venueId);
+        }
+        wishlistedVenueIds = updated;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        if (isCurrentlyWishlisted) {
+          wishlistedVenueIds = {...wishlistedVenueIds, venueId};
+        } else {
+          wishlistedVenueIds = {...wishlistedVenueIds}..remove(venueId);
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update wishlist: $e'),
+          backgroundColor: Colors.red[600],
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        wishlistBusyVenueIds = {...wishlistBusyVenueIds}..remove(venueId);
+      });
+    }
   }
 
   void _applyFilters() {
@@ -44,22 +141,14 @@ class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
             .toList();
       }
 
-      // Budget filter
-      if (budgetRange == 'Under 50k') {
-        filteredVenues = filteredVenues
-            .where((v) => v.discountedVenuePrice < 50000)
-            .toList();
-      } else if (budgetRange == '50k-1L') {
+      // Budget filter (range slider)
+      if (_isBudgetFilterActive) {
         filteredVenues = filteredVenues
             .where(
               (v) =>
-                  v.discountedVenuePrice >= 50000 &&
-                  v.discountedVenuePrice <= 100000,
+                  v.discountedVenuePrice >= selectedMinBudget &&
+                  v.discountedVenuePrice <= selectedMaxBudget,
             )
-            .toList();
-      } else if (budgetRange == 'Above 1L') {
-        filteredVenues = filteredVenues
-            .where((v) => v.discountedVenuePrice > 100000)
             .toList();
       }
 
@@ -80,135 +169,250 @@ class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
     });
   }
 
-  void _showSortDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Sort by',
-          style: GoogleFonts.urbanist(
-            fontWeight: FontWeight.bold,
-            color: const Color(0xff0c1c2c),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSortOption('Price: Low to High'),
-            _buildSortOption('Price: High to Low'),
-            _buildSortOption('Capacity'),
-          ],
-        ),
+  Future<void> _showBudgetMenu(TapDownDetails details) async {
+    final maxSliderValue = categoryMaxBudget > 0
+        ? categoryMaxBudget
+        : _budgetStep;
+
+    double tempMin = selectedMinBudget.clamp(0, maxSliderValue);
+    double tempMax = selectedMaxBudget > 0
+        ? selectedMaxBudget.clamp(0, maxSliderValue)
+        : maxSliderValue;
+
+    if (tempMax <= tempMin) {
+      tempMin = 0;
+      tempMax = maxSliderValue;
+    }
+
+    RangeValues tempValues = RangeValues(tempMin, tempMax);
+
+    await _showAnchoredDropdown(
+      details: details,
+      width: 320,
+      child: StatefulBuilder(
+        builder: (context, setMenuState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                child: Text(
+                  'Budget Range',
+                  style: GoogleFonts.urbanist(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff0c1c2c),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text(
+                  '₹${tempValues.start.toInt()} - ₹${tempValues.end.toInt()}',
+                  style: GoogleFonts.urbanist(
+                    color: const Color(0xff0c1c2c),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: RangeSlider(
+                  values: tempValues,
+                  min: 0,
+                  max: maxSliderValue,
+                  divisions: (maxSliderValue / _budgetStep).round(),
+                  labels: RangeLabels(
+                    '₹${tempValues.start.toInt()}',
+                    '₹${tempValues.end.toInt()}',
+                  ),
+                  activeColor: const Color(0xFF9C27B0),
+                  inactiveColor: Colors.grey[300],
+                  onChanged: (values) {
+                    final snappedStart =
+                        ((values.start / _budgetStep).round() * _budgetStep)
+                            .clamp(0.0, maxSliderValue);
+                    final snappedEnd =
+                        ((values.end / _budgetStep).round() * _budgetStep)
+                            .clamp(0.0, maxSliderValue);
+
+                    setMenuState(() {
+                      if (snappedStart <= snappedEnd) {
+                        tempValues = RangeValues(snappedStart, snappedEnd);
+                      } else {
+                        tempValues = RangeValues(snappedEnd, snappedStart);
+                      }
+                    });
+                  },
+                ),
+              ),
+              if (!hasBudgetData)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Text(
+                    'No budget data available for this category.',
+                    style: GoogleFonts.urbanist(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.urbanist(color: Colors.grey[600]),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedMinBudget = tempValues.start;
+                          selectedMaxBudget = tempValues.end;
+                        });
+                        Navigator.pop(context);
+                        _applyFilters();
+                      },
+                      child: Text(
+                        'Apply',
+                        style: GoogleFonts.urbanist(
+                          color: const Color(0xff0c1c2c),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSortOption(String option) {
-    return RadioListTile<String>(
-      title: Text(
-        option,
-        style: GoogleFonts.urbanist(color: const Color(0xff0c1c2c)),
-      ),
-      value: option,
-      groupValue: sortBy,
-      activeColor: const Color(0xFF9C27B0),
-      onChanged: (value) {
-        setState(() {
-          sortBy = value!;
-        });
-        Navigator.pop(context);
-        _applyFilters();
-      },
-    );
-  }
-
-  void _showBudgetDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Budget Range',
-          style: GoogleFonts.urbanist(
-            fontWeight: FontWeight.bold,
-            color: const Color(0xff0c1c2c),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildBudgetOption('All'),
-            _buildBudgetOption('Under 50k'),
-            _buildBudgetOption('50k-1L'),
-            _buildBudgetOption('Above 1L'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBudgetOption(String option) {
-    return RadioListTile<String>(
-      title: Text(
-        option,
-        style: GoogleFonts.urbanist(color: const Color(0xff0c1c2c)),
-      ),
-      value: option,
-      groupValue: budgetRange,
-      activeColor: const Color(0xFF9C27B0),
-      onChanged: (value) {
-        setState(() {
-          budgetRange = value!;
-        });
-        Navigator.pop(context);
-        _applyFilters();
-      },
-    );
-  }
-
-  void _showCityDialog() {
-    // Get unique cities from venues
+  Future<void> _showCityMenu(TapDownDetails details) async {
     final cities = [
       'All',
       ...widget.venues.map((v) => v.shortLocation).toSet(),
     ];
 
-    showDialog(
+    final selected = await _showRoundedMenu<String>(
+      details,
+      cities
+          .map((city) => PopupMenuItem<String>(value: city, child: Text(city)))
+          .toList(),
+    );
+
+    if (selected == null) return;
+    setState(() {
+      selectedCity = selected;
+    });
+    _applyFilters();
+  }
+
+  Future<T?> _showRoundedMenu<T>(
+    TapDownDetails details,
+    List<PopupMenuEntry<T>> items,
+  ) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = details.globalPosition;
+
+    return showMenu<T>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Select City',
-          style: GoogleFonts.urbanist(
-            fontWeight: FontWeight.bold,
-            color: const Color(0xff0c1c2c),
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: cities.map((city) {
-              return RadioListTile<String>(
-                title: Text(
-                  city,
-                  style: GoogleFonts.urbanist(color: const Color(0xff0c1c2c)),
-                ),
-                value: city,
-                groupValue: selectedCity,
-                activeColor: const Color(0xFF9C27B0),
-                onChanged: (value) {
-                  setState(() {
-                    selectedCity = value!;
-                  });
-                  Navigator.pop(context);
-                  _applyFilters();
-                },
-              );
-            }).toList(),
-          ),
-        ),
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Offset.zero & overlay.size,
       ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 8,
+      color: Colors.white,
+      items: items,
+    );
+  }
+
+  Future<void> _showAnchoredDropdown({
+    required TapDownDetails details,
+    required Widget child,
+    double width = 280,
+  }) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = details.globalPosition;
+    final left = (position.dx - 20).clamp(8.0, overlay.size.width - width - 8);
+    final top = position.dy + 8;
+
+    return showGeneralDialog<void>(
+      context: context,
+      barrierLabel: 'Dismiss',
+      barrierDismissible: true,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              child: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                tween: Tween(begin: 0, end: 1),
+                builder: (context, value, menuChild) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - value) * -8),
+                      child: ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: value,
+                          child: menuChild,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: width),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -236,22 +440,43 @@ class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _buildFilterChip(
-                    label: 'Sort',
-                    icon: Icons.sort,
-                    onTap: _showSortDialog,
+                  SortComponent(
+                    selectedValue: sortBy,
+                    options: const [
+                      'Price: Low to High',
+                      'Price: High to Low',
+                      'Capacity',
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        sortBy = value;
+                      });
+                      _applyFilters();
+                    },
+                    labelTextStyle: GoogleFonts.urbanist(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    activeColor: const Color(0xFF9C27B0),
+                    inactiveBorderColor: Colors.grey[300]!,
+                    inactiveTextColor: Colors.grey[800]!,
+                    inactiveIconColor: Colors.grey[700]!,
                   ),
                   const SizedBox(width: 8),
                   _buildFilterChip(
                     label: 'City',
                     icon: Icons.location_city,
-                    onTap: _showCityDialog,
+                    isSelected: selectedCity != 'All',
+                    onTap: () {},
+                    onTapDown: _showCityMenu,
                   ),
                   const SizedBox(width: 8),
                   _buildFilterChip(
                     label: 'Budget',
                     icon: Icons.currency_rupee,
-                    onTap: _showBudgetDialog,
+                    isSelected: _isBudgetFilterActive,
+                    onTap: () {},
+                    onTapDown: _showBudgetMenu,
                   ),
                 ],
               ),
@@ -315,6 +540,13 @@ class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
                       final venue = filteredVenues[index];
                       return _VenueListCard(
                         venue: venue,
+                        isWishlisted:
+                            venue.id != null &&
+                            wishlistedVenueIds.contains(venue.id!),
+                        isWishlistBusy:
+                            venue.id != null &&
+                            wishlistBusyVenueIds.contains(venue.id!),
+                        onWishlistTap: () => _toggleVenueWishlist(venue),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -338,9 +570,11 @@ class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
     required IconData icon,
     bool isSelected = false,
     required VoidCallback onTap,
+    void Function(TapDownDetails details)? onTapDown,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTapDown == null ? onTap : null,
+      onTapDown: onTapDown,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -383,8 +617,17 @@ class _VenueCategoryListPageState extends State<VenueCategoryListPage> {
 class _VenueListCard extends StatelessWidget {
   final VenueData venue;
   final VoidCallback onTap;
+  final bool isWishlisted;
+  final bool isWishlistBusy;
+  final VoidCallback? onWishlistTap;
 
-  const _VenueListCard({required this.venue, required this.onTap});
+  const _VenueListCard({
+    required this.venue,
+    required this.onTap,
+    this.isWishlisted = false,
+    this.isWishlistBusy = false,
+    this.onWishlistTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -412,23 +655,69 @@ class _VenueListCard extends StatelessWidget {
                 topLeft: Radius.circular(12),
                 bottomLeft: Radius.circular(12),
               ),
-              child: venue.mainImageUrl != null
-                  ? Image.network(
-                      venue.mainImageUrl!,
-                      width: 120,
-                      height: 140,
-                      fit: BoxFit.cover,
-                    )
-                  : Container(
-                      width: 120,
-                      height: 140,
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.image,
-                        size: 40,
-                        color: Colors.grey,
+              child: Stack(
+                children: [
+                  venue.mainImageUrl != null
+                      ? Image.network(
+                          venue.mainImageUrl!,
+                          width: 120,
+                          height: 140,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          width: 120,
+                          height: 140,
+                          color: Colors.grey[200],
+                          child: const Icon(
+                            Icons.image,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
+                        ),
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: GestureDetector(
+                      onTap: isWishlistBusy ? null : onWishlistTap,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.14),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: isWishlistBusy
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.red,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  isWishlisted
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 17,
+                                  color: Colors.red,
+                                ),
+                        ),
                       ),
                     ),
+                  ),
+                ],
+              ),
             ),
 
             // Venue Info

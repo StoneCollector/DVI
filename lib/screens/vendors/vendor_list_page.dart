@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dreamventz/components/sort.dart';
 import 'package:dreamventz/components/vendor_tile.dart';
 import 'package:dreamventz/models/vendor_card.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
+import 'package:dreamventz/services/wishlist_service.dart';
 import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 
 class VendorListPage extends StatefulWidget {
@@ -21,7 +23,7 @@ class VendorListPage extends StatefulWidget {
 
 class _VendorListPageState extends State<VendorListPage> {
   static const double _budgetStep = 5000;
-  static const double _fixedMaxBudget = 25000;
+  static const double _fixedMaxBudget = 50000;
 
   // Data from Supabase
   List<VendorCard> allVendorCards = [];
@@ -46,6 +48,9 @@ class _VendorListPageState extends State<VendorListPage> {
   List<String> availableQualityTags = [];
 
   List<String> availableCities = [];
+  final WishlistService _wishlistService = WishlistService();
+  Set<String> wishlistedVendorCardIds = <String>{};
+  Set<String> wishlistBusyVendorCardIds = <String>{};
 
   bool get _isBudgetFilterActive {
     return hasBudgetData &&
@@ -56,11 +61,6 @@ class _VendorListPageState extends State<VendorListPage> {
     if (card.discountedPrice > 0) return card.discountedPrice;
     if (card.originalPrice > 0) return card.originalPrice;
     return 0;
-  }
-
-  double _normalizeMaxBudget(double maxPrice) {
-    if (maxPrice <= 0) return _budgetStep;
-    return (maxPrice / _budgetStep).ceil() * _budgetStep;
   }
 
   @override
@@ -87,6 +87,14 @@ class _VendorListPageState extends State<VendorListPage> {
       availableCities = await service.getUniqueCities(widget.categoryId);
       availableServiceTags = await service.getAllServiceTags(widget.categoryId);
       availableQualityTags = await service.getAllQualityTags(widget.categoryId);
+      Set<String> loadedWishlistIds = <String>{};
+
+      try {
+        loadedWishlistIds = await _wishlistService
+            .fetchWishlistedVendorCardIds();
+      } catch (_) {
+        loadedWishlistIds = <String>{};
+      }
 
       final rawMaxPrice = allVendorCards.isEmpty
           ? 0.0
@@ -99,6 +107,7 @@ class _VendorListPageState extends State<VendorListPage> {
         hasBudgetData = rawMaxPrice > 0;
         selectedMinBudget = 0;
         selectedMaxBudget = maxPrice;
+        wishlistedVendorCardIds = loadedWishlistIds;
         filteredVendorCards = List.from(allVendorCards);
         isLoading = false;
       });
@@ -106,6 +115,59 @@ class _VendorListPageState extends State<VendorListPage> {
       setState(() {
         errorMessage = 'Failed to load vendors: $e';
         isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _toggleVendorWishlist(VendorCard card) async {
+    if (wishlistBusyVendorCardIds.contains(card.id)) return;
+
+    final isCurrentlyWishlisted = wishlistedVendorCardIds.contains(card.id);
+    setState(() {
+      wishlistBusyVendorCardIds = {...wishlistBusyVendorCardIds, card.id};
+      if (isCurrentlyWishlisted) {
+        wishlistedVendorCardIds = {...wishlistedVendorCardIds}..remove(card.id);
+      } else {
+        wishlistedVendorCardIds = {...wishlistedVendorCardIds, card.id};
+      }
+    });
+
+    try {
+      final nowWishlisted = await _wishlistService.toggleVendorCard(card.id);
+      if (!mounted) return;
+
+      setState(() {
+        final updated = {...wishlistedVendorCardIds};
+        if (nowWishlisted) {
+          updated.add(card.id);
+        } else {
+          updated.remove(card.id);
+        }
+        wishlistedVendorCardIds = updated;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        if (isCurrentlyWishlisted) {
+          wishlistedVendorCardIds = {...wishlistedVendorCardIds, card.id};
+        } else {
+          wishlistedVendorCardIds = {...wishlistedVendorCardIds}
+            ..remove(card.id);
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update wishlist: $e'),
+          backgroundColor: Colors.red[600],
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        wishlistBusyVendorCardIds = {...wishlistBusyVendorCardIds}
+          ..remove(card.id);
       });
     }
   }
@@ -167,50 +229,6 @@ class _VendorListPageState extends State<VendorListPage> {
         );
       }
     });
-  }
-
-  void _showSortDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Sort by',
-          style: GoogleFonts.urbanist(
-            fontWeight: FontWeight.bold,
-            color: Color(0xff0c1c2c),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSortOption('Price: Low to High'),
-            _buildSortOption('Price: High to Low'),
-            _buildSortOption('Discount'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showSortMenu(TapDownDetails details) async {
-    final selected = await _showRoundedMenu<String>(details, [
-      PopupMenuItem(
-        value: 'Price: Low to High',
-        child: Text('Price: Low to High'),
-      ),
-      PopupMenuItem(
-        value: 'Price: High to Low',
-        child: Text('Price: High to Low'),
-      ),
-      PopupMenuItem(value: 'Discount', child: Text('Discount')),
-    ]);
-
-    if (selected == null) return;
-    setState(() {
-      sortBy = selected;
-    });
-    _applyFilters();
   }
 
   Future<void> _showCityMenu(TapDownDetails details) async {
@@ -647,25 +665,6 @@ class _VendorListPageState extends State<VendorListPage> {
     );
   }
 
-  Widget _buildSortOption(String option) {
-    return RadioListTile<String>(
-      title: Text(
-        option,
-        style: GoogleFonts.urbanist(color: Color(0xff0c1c2c)),
-      ),
-      value: option,
-      groupValue: sortBy,
-      activeColor: Color(0xff0c1c2c),
-      onChanged: (value) {
-        setState(() {
-          sortBy = value!;
-        });
-        Navigator.pop(context);
-        _applyFilters();
-      },
-    );
-  }
-
   void _showServiceTagsDialog() {
     // Create a local copy of selected tags for the dialog
     List<String> tempSelectedTags = List.from(selectedServiceTags);
@@ -1051,11 +1050,26 @@ class _VendorListPageState extends State<VendorListPage> {
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _buildFilterChip(
-                          label: 'Sort',
-                          icon: Icons.sort,
-                          onTap: _showSortDialog,
-                          onTapDown: _showSortMenu,
+                        SortComponent(
+                          selectedValue: sortBy,
+                          options: const [
+                            'Price: Low to High',
+                            'Price: High to Low',
+                            'Discount',
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              sortBy = value;
+                            });
+                            _applyFilters();
+                          },
+                          labelTextStyle: GoogleFonts.urbanist(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          inactiveBorderColor: Colors.grey[300]!,
+                          inactiveTextColor: Colors.grey[800]!,
+                          inactiveIconColor: Colors.grey[700]!,
                         ),
                         SizedBox(width: 8),
                         _buildFilterChip(
@@ -1168,9 +1182,16 @@ class _VendorListPageState extends State<VendorListPage> {
                               location: card.city,
                               serviceTags: card.serviceTags,
                               qualityTags: card.qualityTags,
+                              isWishlisted: wishlistedVendorCardIds.contains(
+                                card.id,
+                              ),
+                              isWishlistBusy: wishlistBusyVendorCardIds
+                                  .contains(card.id),
+                              onWishlistTap: () => _toggleVendorWishlist(card),
                               onViewProfile: () {
                                 // Convert VendorCard to Map format for VendorProfilePage
                                 final vendorData = {
+                                  'id': card.id,
                                   'studio_name': card.studioName,
                                   'city': card.city,
                                   'image_path': card.imagePath,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
 
-class VendorTile extends StatefulWidget {
+class VendorTile extends StatelessWidget {
   final String studioName;
   final String serviceType;
   final double rating;
@@ -14,6 +14,9 @@ class VendorTile extends StatefulWidget {
   final String location;
   final List<String> serviceTags;
   final List<String> qualityTags;
+  final bool isWishlisted;
+  final bool isWishlistBusy;
+  final VoidCallback? onWishlistTap;
   final VoidCallback onViewProfile;
 
   const VendorTile({
@@ -29,15 +32,11 @@ class VendorTile extends StatefulWidget {
     required this.location,
     required this.serviceTags,
     required this.qualityTags,
+    this.isWishlisted = false,
+    this.isWishlistBusy = false,
+    this.onWishlistTap,
     required this.onViewProfile,
   });
-
-  @override
-  State<VendorTile> createState() => _VendorTileState();
-}
-
-class _VendorTileState extends State<VendorTile> {
-  bool isWishlisted = false;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +66,7 @@ class _VendorTileState extends State<VendorTile> {
                   topRight: Radius.circular(12),
                 ),
                 child: Image.network(
-                  VendorCardService.getImageUrl(widget.imageFileName),
+                  VendorCardService.getImageUrl(imageFileName),
                   width: double.infinity,
                   height: 200,
                   fit: BoxFit.cover,
@@ -76,7 +75,11 @@ class _VendorTileState extends State<VendorTile> {
                       width: double.infinity,
                       height: 200,
                       color: Colors.grey[300],
-                      child: Icon(Icons.broken_image, size: 50, color: Colors.grey[600]),
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 50,
+                        color: Colors.grey[600],
+                      ),
                     );
                   },
                   loadingBuilder: (context, child, loadingProgress) {
@@ -95,11 +98,7 @@ class _VendorTileState extends State<VendorTile> {
                 top: 12,
                 left: 12,
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isWishlisted = !isWishlisted;
-                    });
-                  },
+                  onTap: isWishlistBusy ? null : onWishlistTap,
                   child: Container(
                     padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -113,11 +112,24 @@ class _VendorTileState extends State<VendorTile> {
                         ),
                       ],
                     ),
-                    child: Icon(
-                      isWishlisted ? Icons.favorite : Icons.favorite_border,
-                      color: Colors.red,
-                      size: 20,
-                    ),
+                    child: isWishlistBusy
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.red,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            isWishlisted
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            color: Colors.red,
+                            size: 20,
+                          ),
                   ),
                 ),
               ),
@@ -134,14 +146,10 @@ class _VendorTileState extends State<VendorTile> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 14,
-                        color: Colors.red,
-                      ),
+                      Icon(Icons.location_on, size: 14, color: Colors.red),
                       SizedBox(width: 4),
                       Text(
-                        widget.location,
+                        location,
                         style: GoogleFonts.urbanist(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -157,13 +165,18 @@ class _VendorTileState extends State<VendorTile> {
 
           // Vendor Details
           Padding(
-            padding: const EdgeInsets.only(left: 14.0, right: 14.0, bottom: 14.0, top: 8.0),
+            padding: const EdgeInsets.only(
+              left: 14.0,
+              right: 14.0,
+              bottom: 14.0,
+              top: 8.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Studio Name
                 Text(
-                  widget.studioName,
+                  studioName,
                   style: GoogleFonts.urbanist(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -176,9 +189,11 @@ class _VendorTileState extends State<VendorTile> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: widget.serviceTags.map((tag) => 
-                    _buildChip(tag, Colors.pink[50]!, Colors.pink)
-                  ).toList(),
+                  children: serviceTags
+                      .map(
+                        (tag) => _buildChip(tag, Colors.pink[50]!, Colors.pink),
+                      )
+                      .toList(),
                 ),
                 SizedBox(height: 8),
 
@@ -186,9 +201,12 @@ class _VendorTileState extends State<VendorTile> {
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: widget.qualityTags.map((tag) => 
-                    _buildChip(tag, Colors.blue[50]!, Colors.blue[700])
-                  ).toList(),
+                  children: qualityTags
+                      .map(
+                        (tag) =>
+                            _buildChip(tag, Colors.blue[50]!, Colors.blue[700]),
+                      )
+                      .toList(),
                 ),
                 SizedBox(height: 12),
 
@@ -217,17 +235,17 @@ class _VendorTileState extends State<VendorTile> {
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Text(
-                                widget.startingPrice,
+                                startingPrice,
                                 style: GoogleFonts.urbanist(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.pink[700],
                                 ),
                               ),
-                              if (widget.originalPrice != null) ...[
+                              if (originalPrice != null) ...[
                                 SizedBox(width: 8),
                                 Text(
-                                  widget.originalPrice!,
+                                  originalPrice!,
                                   style: GoogleFonts.urbanist(
                                     fontSize: 14,
                                     color: Colors.grey[500],
@@ -236,16 +254,20 @@ class _VendorTileState extends State<VendorTile> {
                                   ),
                                 ),
                               ],
-                              if (widget.discountPercent != null && widget.discountPercent! > 0) ...[
+                              if (discountPercent != null &&
+                                  discountPercent! > 0) ...[
                                 SizedBox(width: 8),
                                 Container(
-                                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.pink[700],
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    '${widget.discountPercent}% OFF',
+                                    '$discountPercent% OFF',
                                     style: GoogleFonts.urbanist(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -265,7 +287,7 @@ class _VendorTileState extends State<VendorTile> {
 
                 // View Details Button
                 GestureDetector(
-                  onTap: widget.onViewProfile,
+                  onTap: onViewProfile,
                   child: Container(
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(vertical: 12),
@@ -276,7 +298,11 @@ class _VendorTileState extends State<VendorTile> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.remove_red_eye, color: Colors.white, size: 18),
+                        Icon(
+                          Icons.remove_red_eye,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'View Details',
