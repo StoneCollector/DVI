@@ -3,11 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dreamventz/models/venue_models.dart';
 import 'package:dreamventz/services/venue_service.dart';
-import 'package:dreamventz/services/vendor_card_service.dart';
-import 'package:dreamventz/config/supabase_config.dart';
-import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 import 'package:dreamventz/components/customized_vendor_tile.dart';
 import 'package:dreamventz/components/customized_venue_tile.dart';
+import 'package:dreamventz/components/sort.dart';
 
 class CustomizePackagePage extends StatefulWidget {
   const CustomizePackagePage({super.key});
@@ -17,6 +15,9 @@ class CustomizePackagePage extends StatefulWidget {
 }
 
 class _CustomizePackagePageState extends State<CustomizePackagePage> {
+  static const double _budgetStep = 5000;
+  static const double _fixedMaxBudget = 50000;
+
   int currentStep = 1;
   final _venueService = VenueService();
 
@@ -61,9 +62,18 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
   // Vendor filter states
   String vendorSortBy = 'Rating';
-  String vendorBudgetRange = 'All';
+  double vendorSelectedMinBudget = 0;
+  double vendorSelectedMaxBudget = _fixedMaxBudget;
+  double vendorCategoryMaxBudget = _fixedMaxBudget;
+  bool vendorHasBudgetData = false;
   List<String> selectedServiceTags = [];
   List<String> selectedQualityTags = [];
+
+  bool get _isVendorBudgetFilterActive {
+    return vendorHasBudgetData &&
+        (vendorSelectedMinBudget > 0 ||
+            vendorSelectedMaxBudget < vendorCategoryMaxBudget);
+  }
 
   // Vendor categories mapping (id to name)
   final Map<int, String> categoryMap = {
@@ -116,7 +126,17 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
         );
       }
       if (!mounted) return;
-      setState(() => isLoadingVendors = false);
+      final hasAnyBudgetData = vendorsByCategory.values
+          .expand((vendors) => vendors)
+          .any((vendor) => _effectiveVendorPrice(vendor) > 0);
+
+      setState(() {
+        vendorHasBudgetData = hasAnyBudgetData;
+        vendorCategoryMaxBudget = _fixedMaxBudget;
+        vendorSelectedMinBudget = 0;
+        vendorSelectedMaxBudget = _fixedMaxBudget;
+        isLoadingVendors = false;
+      });
     } catch (e) {
       debugPrint('Error fetching vendors: $e');
       if (!mounted) return;
@@ -126,6 +146,16 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
   String formatCurrency(double value) {
     return '₹${value.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')}';
+  }
+
+  double _effectiveVendorPrice(Map<String, dynamic> vendor) {
+    final discountedPrice = (vendor['discounted_price'] ?? 0) as num;
+    if (discountedPrice > 0) return discountedPrice.toDouble();
+
+    final originalPrice = (vendor['original_price'] ?? 0) as num;
+    if (originalPrice > 0) return originalPrice.toDouble();
+
+    return 0;
   }
 
   double calculateTotal() {
@@ -1061,7 +1091,26 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                       // Clear filters when switching tabs
                       selectedServiceTags = [];
                       selectedQualityTags = [];
-                      vendorBudgetRange = 'All';
+                      vendorCategoryMaxBudget = _fixedMaxBudget;
+                      vendorSelectedMinBudget = 0;
+                      vendorSelectedMaxBudget = _fixedMaxBudget;
+                      final categoryIdMap = {
+                        'photography': 1,
+                        'mehndi': 2,
+                        'makeup': 3,
+                        'catering': 4,
+                        'dj': 5,
+                        'decor': 6,
+                        'pandits': 7,
+                        'invites': 8,
+                      };
+                      final categoryId = categoryIdMap[tab['id']];
+                      final vendors = categoryId == null
+                          ? <Map<String, dynamic>>[]
+                          : (vendorsByCategory[categoryId] ?? []);
+                      vendorHasBudgetData = vendors.any(
+                        (vendor) => _effectiveVendorPrice(vendor) > 0,
+                      );
                       vendorSortBy = 'Rating';
                     });
                   },
@@ -1111,30 +1160,58 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildFilterChip(
-                      label: 'Sort',
-                      icon: Icons.sort,
-                      onTap: _showVendorSortDialog,
+                    SortComponent(
+                      selectedValue: vendorSortBy,
+                      options: const [
+                        'Rating',
+                        'Price: Low to High',
+                        'Price: High to Low',
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          vendorSortBy = value;
+                        });
+                      },
+                      showDropdownIcon: false,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      borderRadius: 16,
+                      iconSize: 14,
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                      labelTextStyle: GoogleFonts.urbanist(
+                        fontSize: 12,
+                        fontWeight: FontWeight.normal,
+                      ),
+                      inactiveBorderColor: Colors.grey[300]!,
+                      inactiveTextColor: Colors.grey[700]!,
+                      inactiveIconColor: Colors.grey[700]!,
                     ),
                     SizedBox(width: 6),
                     _buildFilterChip(
                       label: 'Services',
                       icon: Icons.camera_alt,
                       isSelected: selectedServiceTags.isNotEmpty,
-                      onTap: _showVendorServiceTagsDialog,
+                      onTap: () {},
+                      onTapDown: _showVendorServiceTagsMenu,
                     ),
                     SizedBox(width: 6),
                     _buildFilterChip(
                       label: 'Quality',
                       icon: Icons.verified,
                       isSelected: selectedQualityTags.isNotEmpty,
-                      onTap: _showVendorQualityTagsDialog,
+                      onTap: () {},
+                      onTapDown: _showVendorQualityTagsMenu,
                     ),
                     SizedBox(width: 6),
                     _buildFilterChip(
                       label: 'Budget',
                       icon: Icons.currency_rupee,
-                      onTap: _showVendorBudgetDialog,
+                      isSelected: _isVendorBudgetFilterActive,
+                      onTap: () {},
+                      onTapDown: _showVendorBudgetMenu,
                     ),
                   ],
                 ),
@@ -1310,19 +1387,14 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
       }).toList();
     }
 
-    // Budget filter
-    if (vendorBudgetRange == 'Under 20k') {
+    // Budget filter (range slider)
+    if (_isVendorBudgetFilterActive) {
       filteredVendors = filteredVendors
-          .where((vendor) => (vendor['discounted_price'] ?? 0) < 20000)
-          .toList();
-    } else if (vendorBudgetRange == '20k-30k') {
-      filteredVendors = filteredVendors.where((vendor) {
-        final price = vendor['discounted_price'] ?? 0;
-        return price >= 20000 && price <= 30000;
-      }).toList();
-    } else if (vendorBudgetRange == 'Above 30k') {
-      filteredVendors = filteredVendors
-          .where((vendor) => (vendor['discounted_price'] ?? 0) > 30000)
+          .where(
+            (vendor) =>
+                _effectiveVendorPrice(vendor) >= vendorSelectedMinBudget &&
+                _effectiveVendorPrice(vendor) <= vendorSelectedMaxBudget,
+          )
           .toList();
     }
 
@@ -1859,9 +1931,11 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     required IconData icon,
     bool isSelected = false,
     required VoidCallback onTap,
+    void Function(TapDownDetails details)? onTapDown,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTapDown == null ? onTap : null,
+      onTapDown: onTapDown,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -1894,49 +1968,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     );
   }
 
-  void _showVendorSortDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Sort by',
-          style: GoogleFonts.urbanist(
-            fontWeight: FontWeight.bold,
-            color: Color(0xff0c1c2c),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildSortOption('Rating'),
-            _buildSortOption('Price: Low to High'),
-            _buildSortOption('Price: High to Low'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSortOption(String option) {
-    return RadioListTile<String>(
-      title: Text(
-        option,
-        style: GoogleFonts.urbanist(color: Color(0xff0c1c2c)),
-      ),
-      value: option,
-      groupValue: vendorSortBy,
-      activeColor: Color(0xff0c1c2c),
-      onChanged: (value) {
-        setState(() {
-          vendorSortBy = value!;
-        });
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  void _showVendorServiceTagsDialog() {
+  Future<void> _showVendorServiceTagsMenu(TapDownDetails details) async {
     final availableTags = _getAvailableServiceTags();
 
     if (availableTags.isEmpty) {
@@ -1951,69 +1983,89 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
     List<String> tempSelectedTags = List.from(selectedServiceTags);
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: Text(
-              'Service Types',
-              style: GoogleFonts.urbanist(
-                fontWeight: FontWeight.bold,
-                color: Color(0xff0c1c2c),
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: availableTags.map((tag) {
-                  return CheckboxListTile(
-                    title: Text(
-                      tag,
-                      style: GoogleFonts.urbanist(color: Color(0xff0c1c2c)),
-                    ),
-                    value: tempSelectedTags.contains(tag),
-                    activeColor: Color(0xff0c1c2c),
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        if (value == true) {
-                          tempSelectedTags.add(tag);
-                        } else {
-                          tempSelectedTags.remove(tag);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+    await _showAnchoredDropdown(
+      details: details,
+      width: 300,
+      child: StatefulBuilder(
+        builder: (context, setMenuState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                 child: Text(
-                  'Cancel',
+                  'Service Types',
                   style: GoogleFonts.urbanist(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff0c1c2c),
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    selectedServiceTags = tempSelectedTags;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(
-                  'OK',
-                  style: GoogleFonts.urbanist(
-                    color: Color(0xff0c1c2c),
-                    fontWeight: FontWeight.bold,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: availableTags.map((tag) {
+                      return CheckboxListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        title: Text(
+                          tag,
+                          style: GoogleFonts.urbanist(
+                            color: const Color(0xff0c1c2c),
+                            fontSize: 13,
+                          ),
+                        ),
+                        value: tempSelectedTags.contains(tag),
+                        activeColor: const Color(0xff0c1c2c),
+                        onChanged: (value) {
+                          setMenuState(() {
+                            if (value == true) {
+                              tempSelectedTags.add(tag);
+                            } else {
+                              tempSelectedTags.remove(tag);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
                   ),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.urbanist(color: Colors.grey[600]),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedServiceTags = tempSelectedTags;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Apply',
+                        style: GoogleFonts.urbanist(
+                          color: const Color(0xff0c1c2c),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -2023,7 +2075,7 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     );
   }
 
-  void _showVendorQualityTagsDialog() {
+  Future<void> _showVendorQualityTagsMenu(TapDownDetails details) async {
     final availableTags = _getAvailableQualityTags();
 
     if (availableTags.isEmpty) {
@@ -2038,69 +2090,89 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
 
     List<String> tempSelectedTags = List.from(selectedQualityTags);
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            title: Text(
-              'Quality Tags',
-              style: GoogleFonts.urbanist(
-                fontWeight: FontWeight.bold,
-                color: Color(0xff0c1c2c),
-              ),
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: availableTags.map((tag) {
-                  return CheckboxListTile(
-                    title: Text(
-                      tag,
-                      style: GoogleFonts.urbanist(color: Color(0xff0c1c2c)),
-                    ),
-                    value: tempSelectedTags.contains(tag),
-                    activeColor: Color(0xff0c1c2c),
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        if (value == true) {
-                          tempSelectedTags.add(tag);
-                        } else {
-                          tempSelectedTags.remove(tag);
-                        }
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+    await _showAnchoredDropdown(
+      details: details,
+      width: 300,
+      child: StatefulBuilder(
+        builder: (context, setMenuState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                 child: Text(
-                  'Cancel',
+                  'Quality Tags',
                   style: GoogleFonts.urbanist(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff0c1c2c),
                   ),
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    selectedQualityTags = tempSelectedTags;
-                  });
-                  Navigator.pop(context);
-                },
-                child: Text(
-                  'OK',
-                  style: GoogleFonts.urbanist(
-                    color: Color(0xff0c1c2c),
-                    fontWeight: FontWeight.bold,
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: availableTags.map((tag) {
+                      return CheckboxListTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        title: Text(
+                          tag,
+                          style: GoogleFonts.urbanist(
+                            color: const Color(0xff0c1c2c),
+                            fontSize: 13,
+                          ),
+                        ),
+                        value: tempSelectedTags.contains(tag),
+                        activeColor: const Color(0xff0c1c2c),
+                        onChanged: (value) {
+                          setMenuState(() {
+                            if (value == true) {
+                              tempSelectedTags.add(tag);
+                            } else {
+                              tempSelectedTags.remove(tag);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
                   ),
+                ),
+              ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.urbanist(color: Colors.grey[600]),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          selectedQualityTags = tempSelectedTags;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Apply',
+                        style: GoogleFonts.urbanist(
+                          color: const Color(0xff0c1c2c),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -2110,46 +2182,229 @@ class _CustomizePackagePageState extends State<CustomizePackagePage> {
     );
   }
 
-  void _showVendorBudgetDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: Text(
-          'Budget Range',
-          style: GoogleFonts.urbanist(
-            fontWeight: FontWeight.bold,
-            color: Color(0xff0c1c2c),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildBudgetOption('All'),
-            _buildBudgetOption('Under 20k'),
-            _buildBudgetOption('20k-30k'),
-            _buildBudgetOption('Above 30k'),
-          ],
-        ),
+  Future<void> _showVendorBudgetMenu(TapDownDetails details) async {
+    final maxSliderValue = vendorCategoryMaxBudget > 0
+        ? vendorCategoryMaxBudget
+        : _budgetStep;
+
+    double tempMin = vendorSelectedMinBudget.clamp(0, maxSliderValue);
+    double tempMax = vendorSelectedMaxBudget > 0
+        ? vendorSelectedMaxBudget.clamp(0, maxSliderValue)
+        : maxSliderValue;
+
+    if (tempMax <= tempMin) {
+      tempMin = 0;
+      tempMax = maxSliderValue;
+    }
+
+    RangeValues tempValues = RangeValues(tempMin, tempMax);
+
+    await _showAnchoredDropdown(
+      details: details,
+      width: 320,
+      child: StatefulBuilder(
+        builder: (context, setMenuState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                child: Text(
+                  'Budget Range',
+                  style: GoogleFonts.urbanist(
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xff0c1c2c),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Text(
+                  '₹${tempValues.start.toInt()} - ₹${tempValues.end.toInt()}',
+                  style: GoogleFonts.urbanist(
+                    color: const Color(0xff0c1c2c),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: RangeSlider(
+                  values: tempValues,
+                  min: 0,
+                  max: maxSliderValue,
+                  divisions: (maxSliderValue / _budgetStep).round(),
+                  labels: RangeLabels(
+                    '₹${tempValues.start.toInt()}',
+                    '₹${tempValues.end.toInt()}',
+                  ),
+                  activeColor: const Color(0xff0c1c2c),
+                  inactiveColor: Colors.grey[300],
+                  onChanged: (values) {
+                    final snappedStart =
+                        ((values.start / _budgetStep).round() * _budgetStep)
+                            .clamp(0.0, maxSliderValue);
+                    final snappedEnd =
+                        ((values.end / _budgetStep).round() * _budgetStep)
+                            .clamp(0.0, maxSliderValue);
+
+                    setMenuState(() {
+                      if (snappedStart <= snappedEnd) {
+                        tempValues = RangeValues(snappedStart, snappedEnd);
+                      } else {
+                        tempValues = RangeValues(snappedEnd, snappedStart);
+                      }
+                    });
+                  },
+                ),
+              ),
+              if (!vendorHasBudgetData)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  child: Text(
+                    'No budget data available for this category.',
+                    style: GoogleFonts.urbanist(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: GoogleFonts.urbanist(color: Colors.grey[600]),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          vendorSelectedMinBudget = tempValues.start;
+                          vendorSelectedMaxBudget = tempValues.end;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Apply',
+                        style: GoogleFonts.urbanist(
+                          color: const Color(0xff0c1c2c),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBudgetOption(String option) {
-    return RadioListTile<String>(
-      title: Text(
-        option,
-        style: GoogleFonts.urbanist(color: Color(0xff0c1c2c)),
-      ),
-      value: option,
-      groupValue: vendorBudgetRange,
-      activeColor: Color(0xff0c1c2c),
-      onChanged: (value) {
-        setState(() {
-          vendorBudgetRange = value!;
-        });
-        Navigator.pop(context);
+  Future<void> _showAnchoredDropdown({
+    required TapDownDetails details,
+    required Widget child,
+    double width = 280,
+  }) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = details.globalPosition;
+    final left = (position.dx - 20).clamp(8.0, overlay.size.width - width - 8);
+    final top = position.dy + 8;
+
+    return showGeneralDialog<void>(
+      context: context,
+      barrierLabel: 'Dismiss',
+      barrierDismissible: true,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              child: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                tween: Tween(begin: 0, end: 1),
+                builder: (context, value, menuChild) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, (1 - value) * -8),
+                      child: ClipRect(
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          heightFactor: value,
+                          child: menuChild,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: Material(
+                  color: Colors.transparent,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: width),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 14,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: child,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
       },
+    );
+  }
+
+  Future<T?> _showRoundedMenu<T>(
+    TapDownDetails details,
+    List<PopupMenuEntry<T>> items,
+  ) {
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final position = details.globalPosition;
+
+    return showMenu<T>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      elevation: 8,
+      color: Colors.white,
+      items: items,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:dreamventz/screens/cart/cart_page.dart';
 import 'package:dreamventz/screens/home/home_page.dart';
 import 'package:dreamventz/screens/bookings/bookings_page.dart';
 import 'package:dreamventz/screens/history/history_page.dart';
+import 'package:dreamventz/screens/wishlist/wishlist_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -13,24 +14,32 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  int _wishlistRefreshSignal = 0;
 
-  final List<Widget> _pages = [
-    HomePage(),
-    const CartPage(),
-    BookingsPage(),
-    HistoryPage(),
-  ];
+  List<Widget> _buildPages() {
+    return [
+      HomePage(),
+      const CartPage(),
+      BookingsPage(),
+      HistoryPage(),
+      WishlistPage(refreshSignal: _wishlistRefreshSignal),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
+      if (index == 4) {
+        _wishlistRefreshSignal++;
+      }
       _selectedIndex = index;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final pages = _buildPages();
     return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Color(0xff0c1c2c),
@@ -49,6 +58,10 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Bookings',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.favorite),
+            label: 'Wishlist',
+          ),
         ],
       ),
     );

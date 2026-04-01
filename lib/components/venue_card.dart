@@ -7,8 +7,18 @@ import '../models/venue_models.dart';
 class VenueCard extends StatelessWidget {
   final VenueData venue;
   final VoidCallback? onTap;
+  final bool isWishlisted;
+  final bool isWishlistBusy;
+  final VoidCallback? onWishlistTap;
 
-  const VenueCard({super.key, required this.venue, this.onTap});
+  const VenueCard({
+    super.key,
+    required this.venue,
+    this.onTap,
+    this.isWishlisted = false,
+    this.isWishlistBusy = false,
+    this.onWishlistTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -135,22 +145,64 @@ class VenueCard extends StatelessWidget {
   }
 
   Widget _buildVenueImage() {
-    return ClipRRect(
-      borderRadius: const BorderRadius.only(
-        topLeft: Radius.circular(16),
-        topRight: Radius.circular(16),
-      ),
-      child: venue.mainImageUrl != null
-          ? Image.network(
-              venue.mainImageUrl!,
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return _buildPlaceholderImage();
-              },
-            )
-          : _buildPlaceholderImage(),
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+          ),
+          child: venue.mainImageUrl != null
+              ? Image.network(
+                  venue.mainImageUrl!,
+                  width: double.infinity,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return _buildPlaceholderImage();
+                  },
+                )
+              : _buildPlaceholderImage(),
+        ),
+        Positioned(
+          top: 12,
+          left: 12,
+          child: GestureDetector(
+            onTap: isWishlistBusy ? null : onWishlistTap,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: isWishlistBusy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                        ),
+                      )
+                    : Icon(
+                        isWishlisted ? Icons.favorite : Icons.favorite_border,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
