@@ -56,7 +56,7 @@ class VenueData {
       if (value is String) return int.tryParse(value);
       return null;
     }
-    
+
     return VenueData(
       id: json['id'],
       vendorId: json['vendor_id'],
@@ -94,7 +94,7 @@ class VenueData {
     if (rating == null || reviewCount == 0) {
       return 'New';
     }
-    return '${rating!.toStringAsFixed(1)}';
+    return rating!.toStringAsFixed(1);
   }
 
   /// Get the main image URL (first gallery image)

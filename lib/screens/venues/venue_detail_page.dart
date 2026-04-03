@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/venue_models.dart';
+import '../../services/cart_service.dart';
 
 /// Detailed venue page showing all venue information
 class VenueDetailPage extends StatefulWidget {
@@ -17,7 +18,31 @@ class VenueDetailPage extends StatefulWidget {
 class _VenueDetailPageState extends State<VenueDetailPage> {
   int _currentImageIndex = 0;
   final PageController _pageController = PageController();
+  final CartService _cartService = CartService();
   Timer? _autoScrollTimer;
+
+  Future<void> _addToCart() async {
+    final venueId = widget.venue.id;
+    if (venueId == null || venueId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to add this venue to cart.')),
+      );
+      return;
+    }
+
+    try {
+      await _cartService.addVenueToCart(venueId: venueId, addQuantity: 50);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Venue added to cart successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to add venue: $e')));
+    }
+  }
 
   @override
   void initState() {
@@ -442,7 +467,7 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
                 service.discountPercent,
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
@@ -965,12 +990,7 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                // TODO: Navigate to booking page
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Booking feature coming soon!')),
-                );
-              },
+              onPressed: _addToCart,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xff0c1c2c),
                 foregroundColor: Colors.white,
@@ -983,7 +1003,7 @@ class _VenueDetailPageState extends State<VenueDetailPage> {
                 ),
               ),
               child: Text(
-                'Book Now',
+                'Add to Cart',
                 style: GoogleFonts.urbanist(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,

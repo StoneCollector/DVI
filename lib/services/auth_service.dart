@@ -184,7 +184,7 @@ class AuthService {
     } catch (e) {
       debugPrint('❌ Unexpected error: $e');
       if (e is String) {
-        throw e;
+        rethrow;
       }
       throw AppConstants.unknownError;
     }

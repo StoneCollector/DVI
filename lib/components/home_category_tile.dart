@@ -18,7 +18,7 @@ class HomeCategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: 85,
         child: Column(
           children: [
@@ -41,7 +41,12 @@ class HomeCategoryTile extends StatelessWidget {
                   ),
                 ],
                 border: Border.all(
-                  color: const Color.fromARGB(255, 212, 175, 55).withOpacity(0.3),
+                  color: const Color.fromARGB(
+                    255,
+                    212,
+                    175,
+                    55,
+                  ).withOpacity(0.3),
                   width: 1.5,
                 ),
               ),
@@ -68,7 +73,12 @@ class HomeCategoryTile extends StatelessWidget {
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              const Color.fromARGB(255, 212, 175, 55).withOpacity(0.5),
+                              const Color.fromARGB(
+                                255,
+                                212,
+                                175,
+                                55,
+                              ).withOpacity(0.5),
                             ),
                           ),
                         ),

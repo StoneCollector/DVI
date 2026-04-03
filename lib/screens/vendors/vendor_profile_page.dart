@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/cart_service.dart';
 import '../../services/vendor_card_service.dart';
 
 class VendorProfilePage extends StatelessWidget {
@@ -238,7 +239,34 @@ class VendorProfilePage extends StatelessWidget {
           ],
         ),
         child: ElevatedButton(
-          onPressed: () {},
+          onPressed: () async {
+            final cartService = CartService();
+            final vendorCardId = vendorData['id']?.toString();
+            if (vendorCardId == null || vendorCardId.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Unable to add this vendor to cart.'),
+                ),
+              );
+              return;
+            }
+
+            try {
+              await cartService.addVendorToCart(
+                vendorCardId: vendorCardId,
+                addHours: 1,
+              );
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Vendor added to cart.')),
+              );
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to add vendor: $e')),
+              );
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xff0c1c2c),
             padding: const EdgeInsets.symmetric(vertical: 15),
@@ -247,7 +275,7 @@ class VendorProfilePage extends StatelessWidget {
             ),
           ),
           child: Text(
-            "Check Availability",
+            "Add to Cart",
             style: GoogleFonts.urbanist(
               color: Colors.white,
               fontWeight: FontWeight.bold,

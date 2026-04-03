@@ -173,6 +173,18 @@ class TrendingTile extends StatelessWidget {
                     onPressed: () {
                       Navigator.pushNamed(context, '/bookpackage');
                     },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xff0c1c2c),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                      ),
+                      elevation: 2,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -186,18 +198,6 @@ class TrendingTile extends StatelessWidget {
                         SizedBox(width: 4),
                         Icon(Icons.arrow_forward_ios, size: 10),
                       ],
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xff0c1c2c),
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 7,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                      ),
-                      elevation: 2,
                     ),
                   ),
                 ],

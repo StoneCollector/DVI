@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
-import '../../utils/constants.dart';
 import '../../utils/validators.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
