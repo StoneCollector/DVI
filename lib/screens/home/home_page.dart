@@ -5,14 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/components/carousel.dart';
 import 'package:dreamventz/components/searchbar.dart';
-import 'package:dreamventz/components/services_tile.dart';
-import 'package:dreamventz/components/trending_tile.dart';
 import 'package:dreamventz/models/vendor_card.dart';
 import 'package:dreamventz/screens/vendors/vendor_list_page.dart';
 import 'package:dreamventz/screens/vendors/vendor_profile_page.dart';
 import 'package:dreamventz/screens/profile/user_profile_page.dart';
 import 'package:dreamventz/screens/venues/venue_detail_page.dart';
-import 'package:dreamventz/screens/venues/all_venues_page.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
 import 'package:dreamventz/services/venue_service.dart';
 import 'package:dreamventz/models/venue_models.dart';
@@ -289,7 +286,9 @@ class _HomePageState extends State<HomePage>
           });
         }
       } catch (fallbackError) {
-        debugPrint('Error fetching fallback vendors for search: $fallbackError');
+        debugPrint(
+          'Error fetching fallback vendors for search: $fallbackError',
+        );
         if (mounted) {
           setState(() {
             allVendorCards = [];
@@ -324,6 +323,7 @@ class _HomePageState extends State<HomePage>
 
   void _openVendorSearchResult(VendorCard vendor) {
     final vendorData = {
+      'id': vendor.id,
       'studio_name': vendor.studioName,
       'city': vendor.city,
       'image_path': vendor.imagePath,
@@ -367,8 +367,12 @@ class _HomePageState extends State<HomePage>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color:
-                      const Color.fromARGB(255, 212, 175, 55).withOpacity(0.2),
+                  color: const Color.fromARGB(
+                    255,
+                    212,
+                    175,
+                    55,
+                  ).withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -469,12 +473,14 @@ class _HomePageState extends State<HomePage>
               HomeSearchBar(
                 serviceCategories: categories.isNotEmpty
                     ? categories
-                        .map((c) => {
+                          .map(
+                            (c) => {
                               'label': c['name'],
                               'categoryName': c['name'],
-                              'categoryId': c['id']
-                            })
-                        .toList()
+                              'categoryId': c['id'],
+                            },
+                          )
+                          .toList()
                     : _fallbackCategories,
                 trendingPackages: trendingPackages,
                 venuesByCategory: venuesByCategory,

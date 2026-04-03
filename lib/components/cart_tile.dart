@@ -6,10 +6,13 @@ class CartTile extends StatelessWidget {
   final String? meta;
   final String tag;
   final String price;
+  final String? imageUrl;
   final String? quantityLabel;
   final int? quantityValue;
   final VoidCallback? onIncrement;
   final VoidCallback? onDecrement;
+  final VoidCallback? onSaveForLater;
+  final VoidCallback? onDelete;
 
   const CartTile({
     super.key,
@@ -17,10 +20,13 @@ class CartTile extends StatelessWidget {
     this.meta,
     required this.tag,
     required this.price,
+    this.imageUrl,
     this.quantityLabel,
     this.quantityValue,
     this.onIncrement,
     this.onDecrement,
+    this.onSaveForLater,
+    this.onDelete,
   });
 
   @override
@@ -50,11 +56,23 @@ class CartTile extends StatelessWidget {
                       colors: [Color(0xffe6dfd2), Color(0xfff5f1e8)],
                     ),
                   ),
-                  child: const Icon(
-                    Icons.image_outlined,
-                    color: Color(0xff9f9aa8),
-                    size: 34,
-                  ),
+                  child: (imageUrl ?? '').trim().isNotEmpty
+                      ? Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.image_outlined,
+                              color: Color(0xff9f9aa8),
+                              size: 34,
+                            );
+                          },
+                        )
+                      : const Icon(
+                          Icons.image_outlined,
+                          color: Color(0xff9f9aa8),
+                          size: 34,
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -170,48 +188,56 @@ class CartTile extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.favorite_border,
-                        color: Color(0xff63606c),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          'Save for later',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.urbanist(
-                            fontSize: 14,
-                            color: const Color(0xff2f2b36),
-                            fontWeight: FontWeight.w600,
+                  child: GestureDetector(
+                    onTap: onSaveForLater,
+                    behavior: HitTestBehavior.opaque,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.favorite_border,
+                          color: Color(0xff63606c),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Save for later',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.urbanist(
+                              fontSize: 14,
+                              color: const Color(0xff2f2b36),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 Container(width: 1, height: 18, color: const Color(0xffd8d2e0)),
                 const SizedBox(width: 8),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.delete_outline,
-                      color: Color(0xff63606c),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Delete',
-                      style: GoogleFonts.urbanist(
-                        fontSize: 14,
-                        color: const Color(0xff2f2b36),
-                        fontWeight: FontWeight.w600,
+                GestureDetector(
+                  onTap: onDelete,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.delete_outline,
+                        color: Color(0xff63606c),
+                        size: 20,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        'Delete',
+                        style: GoogleFonts.urbanist(
+                          fontSize: 14,
+                          color: const Color(0xff2f2b36),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),

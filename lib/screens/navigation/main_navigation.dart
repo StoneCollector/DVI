@@ -14,12 +14,13 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  int _cartRefreshSignal = 0;
   int _wishlistRefreshSignal = 0;
 
   List<Widget> _buildPages() {
     return [
       HomePage(),
-      const CartPage(),
+      CartPage(refreshSignal: _cartRefreshSignal),
       BookingsPage(),
       HistoryPage(),
       WishlistPage(refreshSignal: _wishlistRefreshSignal),
@@ -28,6 +29,9 @@ class _MainNavigationState extends State<MainNavigation> {
 
   void _onItemTapped(int index) {
     setState(() {
+      if (index == 1) {
+        _cartRefreshSignal++;
+      }
       if (index == 4) {
         _wishlistRefreshSignal++;
       }

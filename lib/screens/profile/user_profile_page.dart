@@ -498,7 +498,7 @@ class _UserProfilePageState extends State<UserProfilePage>
                                 ? Image.network(
                                     avatarUrl,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
+                                    errorBuilder: (_, _, _) =>
                                         _buildDefaultAvatar(),
                                   )
                                 : _buildDefaultAvatar(),
@@ -931,7 +931,7 @@ class _UserProfilePageState extends State<UserProfilePage>
           Expanded(
             child: _isEditing
                 ? DropdownButtonFormField<String>(
-                    value: _selectedState,
+                    initialValue: _selectedState,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'State',
@@ -1035,7 +1035,7 @@ class _UserProfilePageState extends State<UserProfilePage>
           child: _buildFieldCard(
             child: _isEditing
                 ? DropdownButtonFormField<String>(
-                    value: _selectedGender,
+                    initialValue: _selectedGender,
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Gender',

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'screens/auth/login_screen.dart';
@@ -96,20 +95,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   void _setupAuthListener() {
     debugPrint('🕒 Setting up Auth Listener...');
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
       final AuthChangeEvent event = data.event;
       final Session? session = data.session;
-      
-      debugPrint('🔔 Auth State Change: $event (Session: ${session != null ? "active" : "null"})');
-      
+
+      debugPrint(
+        '🔔 Auth State Change: $event (Session: ${session != null ? "active" : "null"})',
+      );
+
       if (mounted) {
         // Handle any case where we have a session and should be on the home page
-        if (session != null && (
-            event == AuthChangeEvent.signedIn || 
-            event == AuthChangeEvent.initialSession || 
-            event == AuthChangeEvent.tokenRefreshed)) {
-          
-          debugPrint('🚀 Auth condition met! Event: $event. Navigating to Home...');
+        if (session != null &&
+            (event == AuthChangeEvent.signedIn ||
+                event == AuthChangeEvent.initialSession ||
+                event == AuthChangeEvent.tokenRefreshed)) {
+          debugPrint(
+            '🚀 Auth condition met! Event: $event. Navigating to Home...',
+          );
           Navigator.pushNamedAndRemoveUntil(
             context,
             AppConstants.homeRoute,
@@ -123,9 +127,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkInitialSession() async {
     // Wait a moment for any existing session to be restored
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     final session = Supabase.instance.client.auth.currentSession;
-    debugPrint('🧐 Initial Session Check: ${session != null ? "Authenticated" : "Not Authenticated"}');
+    debugPrint(
+      '🧐 Initial Session Check: ${session != null ? "Authenticated" : "Not Authenticated"}',
+    );
 
     if (mounted) {
       setState(() => _isChecking = false);
@@ -142,7 +148,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
     // Navigate based on auth state
     try {
       if (SupabaseConfig.isAuthenticated) {
-        debugPrint('🏠 AuthWrapper: User is authenticated, showing MainNavigation');
+        debugPrint(
+          '🏠 AuthWrapper: User is authenticated, showing MainNavigation',
+        );
         return const MainNavigation();
       }
     } catch (e) {
