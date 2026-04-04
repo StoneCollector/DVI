@@ -61,6 +61,7 @@ dependencies:
   
   # Permission handler for image access
   permission_handler: ^11.3.1
+  razorpay_flutter: ^1.4.3
 
 dev_dependencies:
   flutter_test:

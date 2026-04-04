@@ -4,6 +4,7 @@ import 'package:dreamventz/models/coupon_model.dart';
 import 'package:dreamventz/screens/coupons/coupons_page.dart';
 import 'package:dreamventz/services/cart_service.dart';
 import 'package:dreamventz/services/wishlist_service.dart';
+import 'package:dreamventz/screens/booking/booking_summary_screen.dart';
 import 'package:dreamventz/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -560,7 +561,18 @@ class _CartPageState extends State<CartPage> {
                 ),
                 elevation: 0,
               ),
-              onPressed: () {},
+              onPressed: () {
+                if (_items.isEmpty) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BookingSummaryScreen(
+                      subtotalAmount: _payableAmount,
+                      cartItems: _items,
+                    ),
+                  ),
+                );
+              },
               child: Text(
                 'Continue to Booking',
                 style: GoogleFonts.urbanist(
