@@ -9,17 +9,20 @@ import 'package:dreamventz/config/supabase_config.dart';
 import 'package:dreamventz/models/user_model.dart';
 import 'package:dreamventz/services/user_service.dart';
 import 'package:dreamventz/utils/constants.dart';
-import 'package:dreamventz/utils/validators.dart';
+import 'package:dreamventz/screens/wishlist/wishlist_page.dart';
+import 'package:dreamventz/screens/history/history_page.dart';
+import 'package:dreamventz/screens/orders/orders_page.dart';
 
 class UserProfilePage extends StatefulWidget {
-  const UserProfilePage({super.key});
+  final bool startInEditMode;
+
+  const UserProfilePage({super.key, this.startInEditMode = false});
 
   @override
   State<UserProfilePage> createState() => _UserProfilePageState();
 }
 
-class _UserProfilePageState extends State<UserProfilePage>
-    with TickerProviderStateMixin {
+class _UserProfilePageState extends State<UserProfilePage> {
   final UserService _userService = UserService();
   final ImagePicker _picker = ImagePicker();
 
@@ -29,15 +32,11 @@ class _UserProfilePageState extends State<UserProfilePage>
   bool _isSaving = false;
   File? _selectedImage;
 
-  // Animation controllers
-  late AnimationController _staggerController;
-  late List<Animation<double>> _fadeAnimations;
-  late List<Animation<Offset>> _slideAnimations;
-
   // Form controllers
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
+  late TextEditingController _emailController;
   late TextEditingController _addressController;
   late TextEditingController _pinCodeController;
   late TextEditingController _cityController;
@@ -90,56 +89,19 @@ class _UserProfilePageState extends State<UserProfilePage>
   @override
   void initState() {
     super.initState();
+    _isEditing = widget.startInEditMode;
     _initControllers();
-    _initAnimations();
     _loadUserProfile();
   }
 
   void _initControllers() {
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
+    _emailController = TextEditingController();
     _addressController = TextEditingController();
     _pinCodeController = TextEditingController();
     _cityController = TextEditingController();
     _ageController = TextEditingController();
-  }
-
-  void _initAnimations() {
-    _staggerController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    // Create staggered animations for 8 field cards
-    _fadeAnimations = [];
-    _slideAnimations = [];
-
-    for (int i = 0; i < 8; i++) {
-      final start = i * 0.1;
-      final end = start + 0.4;
-
-      _fadeAnimations.add(
-        Tween<double>(begin: 0.0, end: 1.0).animate(
-          CurvedAnimation(
-            parent: _staggerController,
-            curve: Interval(start, end.clamp(0.0, 1.0), curve: Curves.easeOut),
-          ),
-        ),
-      );
-
-      _slideAnimations.add(
-        Tween<Offset>(begin: const Offset(0.3, 0), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _staggerController,
-            curve: Interval(
-              start,
-              end.clamp(0.0, 1.0),
-              curve: Curves.easeOutCubic,
-            ),
-          ),
-        ),
-      );
-    }
   }
 
   Future<void> _loadUserProfile() async {
@@ -154,6 +116,7 @@ class _UserProfilePageState extends State<UserProfilePage>
         if (_userProfile != null) {
           _nameController.text = _userProfile!.fullName;
           _phoneController.text = _userProfile!.phone ?? '';
+          _emailController.text = _userProfile!.email;
           _addressController.text = _userProfile!.address ?? '';
           _pinCodeController.text = _userProfile!.pinCode ?? '';
           _cityController.text = _userProfile!.city ?? '';
@@ -162,26 +125,20 @@ class _UserProfilePageState extends State<UserProfilePage>
           _selectedGender = _userProfile!.gender;
         }
       });
-
-      // Start animations after data loaded
-      _staggerController.forward();
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile: $e')),
+        );
       }
     }
   }
 
   Future<void> _pickImage() async {
-    if (!_isEditing) return;
-
     PermissionStatus status;
     if (Platform.isAndroid) {
-      if (await Permission.photos.isGranted ||
-          await Permission.storage.isGranted) {
+      if (await Permission.photos.isGranted || await Permission.storage.isGranted) {
         status = PermissionStatus.granted;
       } else {
         status = await Permission.photos.request();
@@ -203,10 +160,7 @@ class _UserProfilePageState extends State<UserProfilePage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please grant photo access in app settings'),
-            action: SnackBarAction(
-              label: 'Settings',
-              onPressed: () => openAppSettings(),
-            ),
+            action: SnackBarAction(label: 'Settings', onPressed: () => openAppSettings()),
           ),
         );
       }
@@ -225,11 +179,7 @@ class _UserProfilePageState extends State<UserProfilePage>
 
       await Supabase.instance.client.storage
           .from('avatars')
-          .uploadBinary(
-            fileName,
-            bytes,
-            fileOptions: const FileOptions(upsert: true),
-          );
+          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
 
       final publicUrl = Supabase.instance.client.storage
           .from('avatars')
@@ -251,29 +201,18 @@ class _UserProfilePageState extends State<UserProfilePage>
       final userId = SupabaseConfig.currentUser?.id;
       if (userId == null) throw Exception('User not authenticated');
 
-      // Upload image if selected
       final avatarUrl = await _uploadProfileImage();
 
       await _userService.updateUserProfile(
         userId: userId,
         fullName: _nameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         avatarUrl: avatarUrl,
-        address: _addressController.text.trim().isEmpty
-            ? null
-            : _addressController.text.trim(),
-        pinCode: _pinCodeController.text.trim().isEmpty
-            ? null
-            : _pinCodeController.text.trim(),
-        city: _cityController.text.trim().isEmpty
-            ? null
-            : _cityController.text.trim(),
+        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+        pinCode: _pinCodeController.text.trim().isEmpty ? null : _pinCodeController.text.trim(),
+        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
         state: _selectedState,
-        age: _ageController.text.trim().isEmpty
-            ? null
-            : int.tryParse(_ageController.text.trim()),
+        age: _ageController.text.trim().isEmpty ? null : int.tryParse(_ageController.text.trim()),
         gender: _selectedGender,
       );
 
@@ -288,44 +227,57 @@ class _UserProfilePageState extends State<UserProfilePage>
           _isEditing = false;
           _selectedImage = null;
         });
-        // Reload profile to get updated data
         _loadUserProfile();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving profile: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving profile: $e')),
+        );
       }
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  void _cancelEdit() {
+    setState(() {
+      _isEditing = false;
+      _selectedImage = null;
+      if (_userProfile != null) {
+        _nameController.text = _userProfile!.fullName;
+        _phoneController.text = _userProfile!.phone ?? '';
+        _emailController.text = _userProfile!.email;
+        _addressController.text = _userProfile!.address ?? '';
+        _pinCodeController.text = _userProfile!.pinCode ?? '';
+        _cityController.text = _userProfile!.city ?? '';
+        _ageController.text = _userProfile!.age?.toString() ?? '';
+        _selectedState = _userProfile!.state;
+        _selectedGender = _userProfile!.gender;
+      }
+    });
   }
 
   Future<void> _signOut() async {
     try {
       await SupabaseConfig.client.auth.signOut();
       if (mounted) {
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil(AppConstants.loginRoute, (route) => false);
+        Navigator.of(context).pushNamedAndRemoveUntil(AppConstants.loginRoute, (route) => false);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error signing out: $e')),
+        );
       }
     }
   }
 
   @override
   void dispose() {
-    _staggerController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _addressController.dispose();
     _pinCodeController.dispose();
     _cityController.dispose();
@@ -336,486 +288,635 @@ class _UserProfilePageState extends State<UserProfilePage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF2F3F7),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF2F3F7),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: _isEditing ? _cancelEdit : () => Navigator.pop(context),
+        ),
+        title: Text(
+          _isEditing ? 'Your Profile' : 'Your Profile',
+          style: GoogleFonts.urbanist(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+        actions: _isEditing
+            ? [
+                _isSaving
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: _saveProfile,
+                        child: Text(
+                          'Save',
+                          style: GoogleFonts.urbanist(
+                            color: const Color(0xFFE53935),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+              ]
+            : null,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                _buildSliverAppBar(),
-                SliverToBoxAdapter(
-                  child: Form(
-                    key: _formKey,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          _buildAnimatedField(0, _buildEmailField()),
-                          const SizedBox(height: 16),
-                          _buildAnimatedField(1, _buildNameField()),
-                          const SizedBox(height: 16),
-                          _buildAnimatedField(2, _buildPhoneField()),
-                          const SizedBox(height: 16),
-                          _buildAnimatedField(3, _buildAddressField()),
-                          const SizedBox(height: 16),
-                          _buildAnimatedField(4, _buildPinCityRow()),
-                          const SizedBox(height: 16),
-                          _buildAnimatedField(5, _buildStateField()),
-                          const SizedBox(height: 16),
-                          _buildAnimatedField(6, _buildAgeGenderRow()),
-                          const SizedBox(height: 32),
-                          _buildAnimatedField(7, _buildSignOutButton()),
-                          const SizedBox(height: 40),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          : _isEditing
+              ? _buildEditView()
+              : _buildOverviewView(),
     );
   }
 
-  Widget _buildSliverAppBar() {
-    final avatarUrl = _userProfile?.avatarUrl;
+  // ─── OVERVIEW VIEW ──────────────────────────────────────────────────────────
 
-    return SliverAppBar(
-      expandedHeight: 280,
-      pinned: true,
-      stretch: true,
-      backgroundColor: const Color(0xff0c1c2c),
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
+  Widget _buildOverviewView() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 8),
+          _buildProfileCard(),
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            title: 'My Account',
+            items: [
+              _SectionItem(
+                  icon: Icons.person_outline, 
+                  label: 'Personal Info',
+                  trailing: _userProfile?.fullName ?? 'Not set',
+                  isIncomplete: _userProfile?.fullName == null || _userProfile!.fullName.isEmpty,
+                  onTap: () => setState(() => _isEditing = true)
+              ),
+              _SectionItem(
+                  icon: Icons.phone_outlined, 
+                  label: 'Mobile Number',
+                  trailing: _userProfile?.phone ?? 'Not set',
+                  isIncomplete: _userProfile?.phone == null || _userProfile!.phone!.isEmpty,
+                  onTap: () => setState(() => _isEditing = true)
+              ),
+              _SectionItem(
+                  icon: Icons.location_on_outlined, 
+                  label: 'Address',
+                  trailing: _userProfile?.city ?? 'Not set',
+                  isIncomplete: _userProfile?.city == null || _userProfile!.city!.isEmpty,
+                  onTap: () => setState(() => _isEditing = true)
+              ),
+              _SectionItem(
+                  icon: Icons.wc_outlined, 
+                  label: 'Gender',
+                  trailing: _userProfile?.gender ?? 'Not set',
+                  isIncomplete: _userProfile?.gender == null || _userProfile!.gender!.isEmpty,
+                  onTap: () => setState(() => _isEditing = true)
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildSectionCard(
+            title: 'Preferences',
+            items: [
+              _SectionItem(icon: Icons.favorite_border, label: 'Wishlist', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WishlistPage(refreshSignal: 0)))),
+              _SectionItem(icon: Icons.inventory_2_outlined, label: 'My Orders', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const OrdersPage()))),
+              _SectionItem(icon: Icons.history, label: 'Order History', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const HistoryPage()))),
+              _SectionItem(icon: Icons.notifications_outlined, label: 'Notifications'),
+              _SectionItem(icon: Icons.lock_outline, label: 'Privacy & Security'),
+              _SectionItem(icon: Icons.help_outline, label: 'Help & Support'),
+              _SectionItem(icon: Icons.info_outline, label: 'About'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _buildSignOutTile(),
+          const SizedBox(height: 32),
+        ],
       ),
-      actions: [
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: _isEditing
-              ? Row(
-                  key: const ValueKey('save'),
-                  children: [
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _isEditing = false;
-                        _selectedImage = null;
-                        // Reset form values
-                        if (_userProfile != null) {
-                          _nameController.text = _userProfile!.fullName;
-                          _phoneController.text = _userProfile!.phone ?? '';
-                          _addressController.text = _userProfile!.address ?? '';
-                          _pinCodeController.text = _userProfile!.pinCode ?? '';
-                          _cityController.text = _userProfile!.city ?? '';
-                          _ageController.text =
-                              _userProfile!.age?.toString() ?? '';
-                          _selectedState = _userProfile!.state;
-                          _selectedGender = _userProfile!.gender;
-                        }
-                      }),
-                      child: Text(
-                        'Cancel',
-                        style: GoogleFonts.urbanist(color: Colors.white70),
-                      ),
-                    ),
-                    _isSaving
-                        ? const Padding(
-                            padding: EdgeInsets.all(12),
-                            child: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                  Colors.amber,
+    );
+  }
+
+  Widget _buildProfileCard() {
+    final avatarUrl = _userProfile?.avatarUrl;
+    final name = _userProfile?.fullName ?? 'User';
+    final email = _userProfile?.email ?? '';
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            // Avatar
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFCDD9F0),
+              ),
+              child: ClipOval(
+                child: _selectedImage != null
+                    ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                    : avatarUrl != null && avatarUrl.isNotEmpty
+                        ? Image.network(
+                            avatarUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Center(
+                              child: Text(
+                                initials,
+                                style: GoogleFonts.urbanist(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF4A7DC8),
                                 ),
                               ),
                             ),
                           )
-                        : IconButton(
-                            icon: const Icon(Icons.check, color: Colors.amber),
-                            onPressed: _saveProfile,
-                          ),
-                  ],
-                )
-              : IconButton(
-                  key: const ValueKey('edit'),
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  onPressed: () => setState(() => _isEditing = true),
-                ),
-        ),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        stretchModes: const [
-          StretchMode.zoomBackground,
-          StretchMode.blurBackground,
-        ],
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                const Color(0xff0c1c2c),
-                const Color(0xff0c1c2c).withOpacity(0.8),
-                Colors.grey[50]!,
-              ],
-              stops: const [0.0, 0.7, 1.0],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 40),
-                // Avatar with edit overlay
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: Stack(
-                    children: [
-                      Hero(
-                        tag: 'profile_avatar',
-                        child: Container(
-                          width: 110,
-                          height: 110,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color.fromARGB(255, 212, 175, 55),
-                              width: 3,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
+                        : Center(
+                            child: Text(
+                              initials,
+                              style: GoogleFonts.urbanist(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF4A7DC8),
                               ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: _selectedImage != null
-                                ? Image.file(_selectedImage!, fit: BoxFit.cover)
-                                : avatarUrl != null && avatarUrl.isNotEmpty
-                                ? Image.network(
-                                    avatarUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) =>
-                                        _buildDefaultAvatar(),
-                                  )
-                                : _buildDefaultAvatar(),
-                          ),
-                        ),
-                      ),
-                      if (_isEditing)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 212, 175, 55),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.camera_alt,
-                              size: 18,
-                              color: Colors.white,
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _userProfile?.fullName ?? 'User',
-                  style: GoogleFonts.urbanist(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _userProfile?.email ?? '',
-                  style: GoogleFonts.urbanist(
-                    fontSize: 14,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: 16),
+            // Name + email + edit link
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.urbanist(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    email,
+                    style: GoogleFonts.urbanist(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    onTap: () => setState(() => _isEditing = true),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Edit profile',
+                          style: GoogleFonts.urbanist(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFE53935),
+                          ),
+                        ),
+                        const Icon(Icons.arrow_right, size: 18, color: Color(0xFFE53935)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDefaultAvatar() {
+  Widget _buildSectionCard({required String title, required List<_SectionItem> items}) {
     return Container(
-      color: const Color(0xff1a2d40),
-      child: const Icon(
-        Icons.person,
-        size: 50,
-        color: Color.fromARGB(255, 212, 175, 55),
-      ),
-    );
-  }
-
-  Widget _buildAnimatedField(int index, Widget child) {
-    if (index >= _fadeAnimations.length) return child;
-
-    return FadeTransition(
-      opacity: _fadeAnimations[index],
-      child: SlideTransition(position: _slideAnimations[index], child: child),
-    );
-  }
-
-  Widget _buildFieldCard({required Widget child}) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
-        border: _isEditing
-            ? Border.all(
-                color: const Color.fromARGB(255, 212, 175, 55).withOpacity(0.3),
-              )
-            : null,
       ),
-      child: child,
-    );
-  }
-
-  Widget _buildEmailField() {
-    return _buildFieldCard(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xff0c1c2c).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.email_outlined, color: Color(0xff0c1c2c)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          // Section header with left red accent
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
               children: [
-                Text(
-                  'Email',
-                  style: GoogleFonts.urbanist(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                Container(
+                  width: 4,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(width: 10),
                 Text(
-                  _userProfile?.email ?? '-',
+                  title,
                   style: GoogleFonts.urbanist(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xff0c1c2c),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.lock_outline, size: 18, color: Colors.grey[400]),
+          // Items
+          ...items.asMap().entries.map((entry) {
+            final i = entry.key;
+            final item = entry.value;
+            return Column(
+              children: [
+                if (i > 0)
+                  Divider(height: 1, indent: 56, endIndent: 16, color: Colors.grey[100]),
+                _buildListTile(item),
+              ],
+            );
+          }),
+          const SizedBox(height: 8),
         ],
       ),
     );
   }
 
-  Widget _buildNameField() {
-    return _buildFieldCard(
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xff0c1c2c).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+  Widget _buildListTile(_SectionItem item) {
+    return InkWell(
+      onTap: item.onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(item.icon, size: 20, color: Colors.grey[700]),
             ),
-            child: const Icon(Icons.person_outline, color: Color(0xff0c1c2c)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                item.label,
+                style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+            if (item.trailing != null)
+              Text(
+                item.trailing!,
+                style: GoogleFonts.urbanist(
+                  fontSize: 13,
+                  fontWeight: item.isIncomplete ? FontWeight.bold : FontWeight.normal,
+                  color: item.isIncomplete ? const Color(0xFFE53935) : Colors.grey[500],
+                ),
+              ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, size: 18, color: Colors.grey[400]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignOutTile() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _isEditing
-                ? TextFormField(
+        ],
+      ),
+      child: InkWell(
+        onTap: _signOut,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.logout, size: 20, color: Colors.red[600]),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Sign Out',
+                style: GoogleFonts.urbanist(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── EDIT VIEW ───────────────────────────────────────────────────────────────
+
+  Widget _buildEditView() {
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 120),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildEditAvatar(),
+                const SizedBox(height: 24),
+                _buildEditCard(children: [
+                  _buildOutlinedField(
                     controller: _nameController,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Full Name',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    validator: (v) =>
-                        v?.isEmpty ?? true ? 'Name is required' : null,
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Full Name',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.fullName ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
+                    label: 'Name',
+                    keyboardType: TextInputType.name,
+                    validator: (v) => v?.isEmpty ?? true ? 'Name is required' : null,
                   ),
+                  const SizedBox(height: 16),
+                  _buildMobileField(),
+                  const SizedBox(height: 16),
+                  _buildEmailField(),
+                  const SizedBox(height: 16),
+                  _buildAddressField(),
+                  const SizedBox(height: 16),
+                  _buildPinCityRow(),
+                  const SizedBox(height: 16),
+                  _buildStateDropdown(),
+                  const SizedBox(height: 16),
+                  _buildGenderDropdown(),
+                ]),
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+        // Bottom Update Profile button
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: _buildUpdateButton(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEditAvatar() {
+    final avatarUrl = _userProfile?.avatarUrl;
+    final name = _userProfile?.fullName ?? 'U';
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Stack(
+        alignment: Alignment.bottomRight,
+        children: [
+          Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFCDD9F0),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: _selectedImage != null
+                  ? Image.file(_selectedImage!, fit: BoxFit.cover)
+                  : avatarUrl != null && avatarUrl.isNotEmpty
+                      ? Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Center(
+                            child: Text(initials,
+                              style: GoogleFonts.urbanist(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF4A7DC8))),
+                          ),
+                        )
+                      : Center(
+                          child: Text(initials,
+                            style: GoogleFonts.urbanist(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF4A7DC8))),
+                        ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.grey[200]!, width: 1.5),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4),
+              ],
+            ),
+            child: Icon(Icons.edit, size: 14, color: Colors.grey[700]),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPhoneField() {
-    return _buildFieldCard(
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xff0c1c2c).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.phone_outlined, color: Color(0xff0c1c2c)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _isEditing
-                ? TextFormField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    validator: Validators.validatePhone,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Phone',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Phone',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.phone ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
+  Widget _buildEditCard({required List<Widget> children}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildOutlinedField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
+    bool readOnly = false,
+    List<TextInputFormatter>? inputFormatters,
+    int maxLines = 1,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      readOnly: readOnly,
+      inputFormatters: inputFormatters,
+      maxLines: maxLines,
+      style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.urbanist(color: Colors.grey[500], fontSize: 13),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE53935)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildFieldWithChange({
+    required TextEditingController controller,
+    required String label,
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = true,
+  }) {
+    return Stack(
+      alignment: Alignment.centerRight,
+      children: [
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          readOnly: readOnly,
+          style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
+          decoration: InputDecoration(
+            labelText: label,
+            labelStyle: GoogleFonts.urbanist(color: Colors.grey[500], fontSize: 13),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide(color: Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.only(left: 16, right: 80, top: 14, bottom: 14),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+        ),
+        Positioned(
+          right: 12,
+          child: GestureDetector(
+            onTap: () {
+              // This is a placeholder for change flow (phone/email change via OTP, etc.)
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Change $label feature coming soon')),
+              );
+            },
+            child: Text(
+              'CHANGE',
+              style: GoogleFonts.urbanist(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFFE53935),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileField() {
+    return _buildFieldWithChange(
+      controller: _phoneController,
+      label: 'Mobile',
+      keyboardType: TextInputType.phone,
+    );
+  }
+
+  Widget _buildEmailField() {
+    return _buildFieldWithChange(
+      controller: _emailController,
+      label: 'Email',
+      readOnly: true,
     );
   }
 
   Widget _buildAddressField() {
-    return _buildFieldCard(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xff0c1c2c).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.location_on_outlined,
-              color: Color(0xff0c1c2c),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _isEditing
-                ? TextFormField(
-                    controller: _addressController,
-                    maxLines: 2,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Address',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Address',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.address ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
-      ),
+    return _buildOutlinedField(
+      controller: _addressController,
+      label: 'Address',
+      maxLines: 2,
     );
   }
 
@@ -823,305 +924,127 @@ class _UserProfilePageState extends State<UserProfilePage>
     return Row(
       children: [
         Expanded(
-          child: _buildFieldCard(
-            child: _isEditing
-                ? TextFormField(
-                    controller: _pinCodeController,
-                    keyboardType: TextInputType.number,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(6),
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: InputDecoration(
-                      labelText: 'Pin Code',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      prefixIcon: const Icon(Icons.pin_drop_outlined, size: 20),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Pin Code',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.pinCode ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
+          child: _buildOutlinedField(
+            controller: _pinCodeController,
+            label: 'Pin Code',
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(6),
+              FilteringTextInputFormatter.digitsOnly,
+            ],
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _buildFieldCard(
-            child: _isEditing
-                ? TextFormField(
-                    controller: _cityController,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'City',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      prefixIcon: const Icon(
-                        Icons.location_city_outlined,
-                        size: 20,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'City',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.city ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
+          child: _buildOutlinedField(
+            controller: _cityController,
+            label: 'City',
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStateField() {
-    return _buildFieldCard(
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xff0c1c2c).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.map_outlined, color: Color(0xff0c1c2c)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _isEditing
-                ? DropdownButtonFormField<String>(
-                    initialValue: _selectedState,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: 'State',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xff0c1c2c),
-                    ),
-                    items: _indianStates
-                        .map(
-                          (state) => DropdownMenuItem(
-                            value: state,
-                            child: Text(state),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedState = v),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'State',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.state ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+  Widget _buildStateDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedState,
+      isExpanded: true,
+      style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: 'State',
+        labelStyle: GoogleFonts.urbanist(color: Colors.grey[500], fontSize: 13),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey[300]!),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: Colors.white,
       ),
+      items: _indianStates.map((state) => DropdownMenuItem(value: state, child: Text(state))).toList(),
+      onChanged: (v) => setState(() => _selectedState = v),
     );
   }
 
-  Widget _buildAgeGenderRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildFieldCard(
-            child: _isEditing
-                ? TextFormField(
-                    controller: _ageController,
-                    keyboardType: TextInputType.number,
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    inputFormatters: [
-                      LengthLimitingTextInputFormatter(2),
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: InputDecoration(
-                      labelText: 'Age',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      prefixIcon: const Icon(Icons.cake_outlined, size: 20),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Age',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.age?.toString() ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+  Widget _buildGenderDropdown() {
+    return DropdownButtonFormField<String>(
+      value: _selectedGender,
+      isExpanded: true,
+      style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
+      decoration: InputDecoration(
+        labelText: 'Gender',
+        labelStyle: GoogleFonts.urbanist(color: Colors.grey[500], fontSize: 13),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey[300]!),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildFieldCard(
-            child: _isEditing
-                ? DropdownButtonFormField<String>(
-                    initialValue: _selectedGender,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: 'Gender',
-                      labelStyle: GoogleFonts.urbanist(color: Colors.grey[600]),
-                      prefixIcon: const Icon(Icons.wc_outlined, size: 20),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                    style: GoogleFonts.urbanist(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xff0c1c2c),
-                    ),
-                    items: _genderOptions
-                        .map(
-                          (g) => DropdownMenuItem(
-                            value: g,
-                            child: Text(g, overflow: TextOverflow.ellipsis),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedGender = v),
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Gender',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _userProfile?.gender ?? '-',
-                        style: GoogleFonts.urbanist(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xff0c1c2c),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
         ),
-      ],
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      items: _genderOptions.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+      onChanged: (v) => setState(() => _selectedGender = v),
     );
   }
 
-  Widget _buildSignOutButton() {
+  Widget _buildUpdateButton() {
     return Container(
-      width: double.infinity,
-      height: 56,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.red.shade400, Colors.red.shade600],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: const Color(0xFFF2F3F7),
+        border: Border(top: BorderSide(color: Colors.grey[200]!)),
       ),
-      child: ElevatedButton.icon(
-        onPressed: _signOut,
-        icon: const Icon(Icons.logout, color: Colors.white),
-        label: Text(
-          'Sign Out',
-          style: GoogleFonts.urbanist(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+      child: SizedBox(
+        height: 52,
+        child: ElevatedButton(
+          onPressed: _isSaving ? null : _saveProfile,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _isSaving ? Colors.grey[300] : const Color(0xFF0c1c2c),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            elevation: 0,
           ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          child: _isSaving
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Text(
+                  'Update profile',
+                  style: GoogleFonts.urbanist(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
         ),
       ),
     );
   }
+}
+
+// Helper data class for section items
+class _SectionItem {
+  final IconData icon;
+  final String label;
+  final String? trailing;
+  final VoidCallback? onTap;
+  final bool isIncomplete;
+
+  _SectionItem({
+    required this.icon,
+    required this.label,
+    this.trailing,
+    this.onTap,
+    this.isIncomplete = false,
+  });
 }

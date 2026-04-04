@@ -55,7 +55,7 @@ class HomeCategoriesSection extends StatelessWidget {
         ),
         const SizedBox(height: 15),
         SizedBox(
-          height: 105, // Slightly increased to fit circular tiles + text
+          height: 135, // Increased to fit larger rounded squares + text
           child: isLoading
               ? const Center(
                   child: CircularProgressIndicator(color: Color(0xff0c1c2c)),

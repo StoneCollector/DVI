@@ -23,10 +23,10 @@ class HomeCategoryTile extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 55,
-              height: 55,
+              width: 75,
+              height: 75,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(16),
                 gradient: const LinearGradient(
                   colors: [Color(0xFFFFF8E1), Colors.white],
                   begin: Alignment.topLeft,
@@ -50,7 +50,8 @@ class HomeCategoryTile extends StatelessWidget {
                   width: 1.5,
                 ),
               ),
-              child: ClipOval(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
                 child: Image.network(
                   SupabaseConfig.getImageUrl(imageUrl),
                   fit: BoxFit.cover,

@@ -171,6 +171,11 @@ class CartService {
     await _supabase.from('cart').delete().eq('cart_id', cartId);
   }
 
+  Future<void> clearCart() async {
+    final user = _requireUser();
+    await _supabase.from('cart').delete().eq('user_id', user.id);
+  }
+
   Future<List<CartDisplayItem>> fetchCartDisplayItems() async {
     final user = _requireUser();
     final response = await _supabase

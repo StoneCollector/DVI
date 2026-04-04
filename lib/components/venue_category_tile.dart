@@ -6,12 +6,14 @@ import 'package:google_fonts/google_fonts.dart';
 class VenueCategoryTile extends StatelessWidget {
   final String label;
   final int venueCount;
+  final String? imageUrl;
   final VoidCallback? onTap;
 
   const VenueCategoryTile({
     super.key,
     required this.label,
     required this.venueCount,
+    this.imageUrl,
     this.onTap,
   });
 
@@ -21,37 +23,42 @@ class VenueCategoryTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 140,
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          // Purple/pink gradient background for venue tiles
-          gradient: const LinearGradient(
-            colors: [
-              Color(0xFFF3E5F5), // Light purple
-              Color(0xFFFFE6F0), // Light pink
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24), // Squircle shape
+          borderRadius: BorderRadius.circular(24),
+          image: imageUrl != null
+              ? DecorationImage(
+                  image: AssetImage(imageUrl!),
+                  fit: BoxFit.cover,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withOpacity(0.35),
+                    BlendMode.darken,
+                  ),
+                )
+              : null,
+          gradient: imageUrl == null
+              ? const LinearGradient(
+                  colors: [Color(0xFFF3E5F5), Color(0xFFFFE6F0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
         ),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category label
             Text(
               label.trim(),
               style: GoogleFonts.urbanist(
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
-                color: const Color(0xff0c1c2c),
+                color: imageUrl != null ? Colors.white : const Color(0xff0c1c2c),
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 8),
-
-            // Venue count badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(

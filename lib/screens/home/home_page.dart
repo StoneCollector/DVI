@@ -423,7 +423,7 @@ class _HomePageState extends State<HomePage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const UserProfilePage(),
+                    builder: (context) => const UserProfilePage(startInEditMode: true),
                   ),
                 ).then((_) => _fetchUserProfile());
               },

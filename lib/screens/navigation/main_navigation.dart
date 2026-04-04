@@ -3,7 +3,6 @@ import 'package:dreamventz/screens/cart/cart_page.dart';
 import 'package:dreamventz/screens/home/home_page.dart';
 import 'package:dreamventz/screens/bookings/bookings_page.dart';
 import 'package:dreamventz/screens/history/history_page.dart';
-import 'package:dreamventz/screens/wishlist/wishlist_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -15,15 +14,12 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   int _cartRefreshSignal = 0;
-  int _wishlistRefreshSignal = 0;
 
   List<Widget> _buildPages() {
     return [
       HomePage(),
       CartPage(refreshSignal: _cartRefreshSignal),
       BookingsPage(),
-      HistoryPage(),
-      WishlistPage(refreshSignal: _wishlistRefreshSignal),
     ];
   }
 
@@ -31,9 +27,6 @@ class _MainNavigationState extends State<MainNavigation> {
     setState(() {
       if (index == 1) {
         _cartRefreshSignal++;
-      }
-      if (index == 4) {
-        _wishlistRefreshSignal++;
       }
       _selectedIndex = index;
     });
@@ -60,11 +53,6 @@ class _MainNavigationState extends State<MainNavigation> {
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today),
             label: 'Bookings',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Wishlist',
           ),
         ],
       ),
