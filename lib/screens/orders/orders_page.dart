@@ -46,18 +46,25 @@ class _OrdersPageState extends State<OrdersPage> {
     return Scaffold(
       backgroundColor: const Color(0xfff5f3f8),
       appBar: AppBar(
-        backgroundColor: const Color(0xff0c1c2c),
+        backgroundColor: const Color(0xfff5f3f8),
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
-          'Active Orders',
+          'My Orders',
           style: GoogleFonts.urbanist(
-            color: Colors.white,
+            color: const Color(0xff14111e),
             fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
           ),
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xff17141f)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: const [
+          Icon(Icons.more_vert, color: Color(0xff17141f)),
+          SizedBox(width: 14),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

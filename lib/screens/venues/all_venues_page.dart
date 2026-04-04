@@ -22,6 +22,17 @@ class AllVenuesPage extends StatelessWidget {
     'Other',
   ];
 
+  static const Map<String, String> _categoryImages = {
+    'Wedding Venue': 'assets/images/categories/venue/celebration venue.png',
+    'Corporate Event Space': 'assets/images/categories/venue/corporate event space.jpg',
+    'Party Hall': 'assets/images/categories/venue/Party Hall.jpg',
+    'Celebration Venue': 'assets/images/categories/venue/celebration venue.png',
+    'Outdoor Venue': 'assets/images/categories/venue/outdoor venue.jpg',
+    'Banquet Hall': 'assets/images/categories/venue/banquet hall.jpg',
+    'Conference Center': 'assets/images/categories/venue/conference center.jpg',
+    'Other': 'assets/images/categories/venue/other.jpg',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,6 +63,7 @@ class AllVenuesPage extends StatelessWidget {
           return VenueCategoryTile(
             label: category,
             venueCount: venues.length,
+            imageUrl: _categoryImages[category],
             onTap: () {
               if (venues.isNotEmpty) {
                 Navigator.push(
@@ -64,7 +76,6 @@ class AllVenuesPage extends StatelessWidget {
                   ),
                 );
               } else {
-                // Show message for empty categories
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

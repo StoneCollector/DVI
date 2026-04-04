@@ -340,7 +340,7 @@ class _CartPageState extends State<CartPage> {
           body: Column(
             children: [
               Expanded(child: _buildBody()),
-              _buildBottomSummary(),
+              if (!_isLoading && _items.isNotEmpty) _buildBottomSummary(),
             ],
           ),
         ),

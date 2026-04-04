@@ -20,7 +20,6 @@ class _MainNavigationState extends State<MainNavigation> {
       HomePage(),
       CartPage(refreshSignal: _cartRefreshSignal),
       BookingsPage(),
-      HistoryPage(),
     ];
   }
 
@@ -55,7 +54,6 @@ class _MainNavigationState extends State<MainNavigation> {
             icon: Icon(Icons.calendar_today),
             label: 'Bookings',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
         ],
       ),
     );

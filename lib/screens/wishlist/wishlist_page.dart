@@ -281,25 +281,27 @@ class _WishlistPageState extends State<WishlistPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xfff5f3f8),
       appBar: AppBar(
-        backgroundColor: const Color(0xff0c1c2c),
-        foregroundColor: Colors.white,
+        backgroundColor: const Color(0xfff5f3f8),
+        elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: Colors.white),
-          onPressed: () {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              AppConstants.homeRoute,
-              (route) => false,
-            );
-          },
-        ),
         title: Text(
           'Wishlist',
-          style: GoogleFonts.urbanist(fontWeight: FontWeight.bold),
+          style: GoogleFonts.urbanist(
+            color: const Color(0xff14111e),
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+          ),
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xff17141f)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: const [
+          Icon(Icons.more_vert, color: Color(0xff17141f)),
+          SizedBox(width: 14),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _loadWishlist,
