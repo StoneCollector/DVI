@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/config/supabase_config.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 class TrendingTile extends StatelessWidget {
   final String title;

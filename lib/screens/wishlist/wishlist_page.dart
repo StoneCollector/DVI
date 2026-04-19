@@ -6,7 +6,6 @@ import 'package:dreamventz/screens/venues/venue_detail_page.dart';
 import 'package:dreamventz/services/venue_service.dart';
 import 'package:dreamventz/services/vendor_card_service.dart';
 import 'package:dreamventz/services/wishlist_service.dart';
-import 'package:dreamventz/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

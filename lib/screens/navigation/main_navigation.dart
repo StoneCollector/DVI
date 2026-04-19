@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:dreamventz/screens/cart/cart_page.dart';
 import 'package:dreamventz/screens/home/home_page.dart';
 import 'package:dreamventz/screens/bookings/bookings_page.dart';
-import 'package:dreamventz/screens/history/history_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});

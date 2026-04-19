@@ -2,12 +2,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dreamventz/models/order_model.dart';
 import 'package:dreamventz/models/cart_item.dart';
 import 'package:dreamventz/config/supabase_config.dart';
-import 'dart:convert';
 
 class OrderService {
   final SupabaseClient _client = SupabaseConfig.client;
 
-  Future<void> createOrder(List<CartDisplayItem> cartItems, int totalAmount, String paymentId) async {
+  Future<void> createOrder(
+    List<CartDisplayItem> cartItems,
+    int totalAmount,
+    String paymentId,
+  ) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
@@ -19,7 +22,10 @@ class OrderService {
         'hours': item.hours,
         'unitPrice': item.unitPrice,
         'imageUrl': item.imageUrl,
-        'itemType': item.itemType.toString().split('.').last, // 'venue' or 'vendor'
+        'itemType': item.itemType
+            .toString()
+            .split('.')
+            .last, // 'venue' or 'vendor'
       };
     }).toList();
 
@@ -44,7 +50,9 @@ class OrderService {
         .not('status', 'eq', 'Cancelled')
         .order('created_at', ascending: false);
 
-    return (response as List<dynamic>).map((data) => OrderModel.fromJson(data)).toList();
+    return (response as List<dynamic>)
+        .map((data) => OrderModel.fromJson(data))
+        .toList();
   }
 
   Future<List<OrderModel>> fetchHistoryOrders() async {
@@ -58,6 +66,8 @@ class OrderService {
         .inFilter('status', ['Completed', 'Cancelled'])
         .order('created_at', ascending: false);
 
-    return (response as List<dynamic>).map((data) => OrderModel.fromJson(data)).toList();
+    return (response as List<dynamic>)
+        .map((data) => OrderModel.fromJson(data))
+        .toList();
   }
 }

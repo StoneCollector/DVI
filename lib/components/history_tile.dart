@@ -7,6 +7,7 @@ class HistoryTile extends StatelessWidget {
   final String price;
   final String status;
   final Color statusColor;
+  final String? imageUrl;
 
   const HistoryTile({
     super.key,
@@ -15,6 +16,7 @@ class HistoryTile extends StatelessWidget {
     required this.price,
     required this.status,
     required this.statusColor,
+    this.imageUrl,
   });
 
   @override
@@ -37,7 +39,32 @@ class HistoryTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Placeholder(fallbackHeight: 100, fallbackWidth: 100),
+          Container(
+            height: 100,
+            width: 100,
+            decoration: BoxDecoration(
+              color: const Color(0xfff5f3f8),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: imageUrl != null && imageUrl!.isNotEmpty
+                  ? Image.network(
+                      imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                        size: 28,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.image_outlined,
+                      color: Colors.grey,
+                      size: 28,
+                    ),
+            ),
+          ),
           SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -45,7 +72,10 @@ class HistoryTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.urbanist(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: GoogleFonts.urbanist(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 Text(
                   time,
