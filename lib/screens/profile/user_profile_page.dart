@@ -30,6 +30,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   bool _isLoading = true;
   bool _isEditing = false;
   bool _isSaving = false;
+  bool _isDeleting = false;
   File? _selectedImage;
 
   // Form controllers
@@ -128,9 +129,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
       }
     }
   }
@@ -138,7 +139,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
   Future<void> _pickImage() async {
     PermissionStatus status;
     if (Platform.isAndroid) {
-      if (await Permission.photos.isGranted || await Permission.storage.isGranted) {
+      if (await Permission.photos.isGranted ||
+          await Permission.storage.isGranted) {
         status = PermissionStatus.granted;
       } else {
         status = await Permission.photos.request();
@@ -160,7 +162,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please grant photo access in app settings'),
-            action: SnackBarAction(label: 'Settings', onPressed: () => openAppSettings()),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: () => openAppSettings(),
+            ),
           ),
         );
       }
@@ -179,7 +184,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
       await Supabase.instance.client.storage
           .from('avatars')
-          .uploadBinary(fileName, bytes, fileOptions: const FileOptions(upsert: true));
+          .uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(upsert: true),
+          );
 
       final publicUrl = Supabase.instance.client.storage
           .from('avatars')
@@ -206,13 +215,23 @@ class _UserProfilePageState extends State<UserProfilePage> {
       await _userService.updateUserProfile(
         userId: userId,
         fullName: _nameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
         avatarUrl: avatarUrl,
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-        pinCode: _pinCodeController.text.trim().isEmpty ? null : _pinCodeController.text.trim(),
-        city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+        address: _addressController.text.trim().isEmpty
+            ? null
+            : _addressController.text.trim(),
+        pinCode: _pinCodeController.text.trim().isEmpty
+            ? null
+            : _pinCodeController.text.trim(),
+        city: _cityController.text.trim().isEmpty
+            ? null
+            : _cityController.text.trim(),
         state: _selectedState,
-        age: _ageController.text.trim().isEmpty ? null : int.tryParse(_ageController.text.trim()),
+        age: _ageController.text.trim().isEmpty
+            ? null
+            : int.tryParse(_ageController.text.trim()),
         gender: _selectedGender,
       );
 
@@ -231,9 +250,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error saving profile: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -262,13 +281,131 @@ class _UserProfilePageState extends State<UserProfilePage> {
     try {
       await SupabaseConfig.client.auth.signOut();
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(AppConstants.loginRoute, (route) => false);
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(AppConstants.loginRoute, (route) => false);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error signing out: $e')),
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error signing out: $e')));
+      }
+    }
+  }
+
+  Future<void> _onDeleteAccountPressed() async {
+    if (_isDeleting) return;
+
+    final firstConfirmation = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete Account'),
+          content: const Text(
+            'Are you sure you want to delete your account? This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Continue'),
+            ),
+          ],
         );
+      },
+    );
+
+    if (firstConfirmation != true || !mounted) {
+      return;
+    }
+
+    final finalConfirmation = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Final Confirmation'),
+          content: const Text(
+            'This permanently deletes your account and all related data. Proceed?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete Forever'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (finalConfirmation != true || !mounted) {
+      return;
+    }
+
+    await _deleteAccount();
+  }
+
+  Future<void> _deleteAccount() async {
+    final userId = SupabaseConfig.currentUser?.id;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You are not logged in. Please sign in again.'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isDeleting = true);
+
+    try {
+      final response = await SupabaseConfig.client.functions.invoke(
+        'delete-account',
+        body: {'user_id': userId},
+      );
+
+      if (response.status < 200 || response.status >= 300) {
+        final dynamic data = response.data;
+        String message = 'Failed to delete account. Please try again.';
+        if (data is Map && data['error'] != null) {
+          message = data['error'].toString();
+        }
+        throw Exception(message);
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account deleted successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      await SupabaseConfig.client.auth.signOut();
+
+      if (!mounted) return;
+      Navigator.of(
+        context,
+      ).pushNamedAndRemoveUntil(AppConstants.loginRoute, (route) => false);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Delete account failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDeleting = false);
       }
     }
   }
@@ -333,8 +470,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _isEditing
-              ? _buildEditView()
-              : _buildOverviewView(),
+          ? _buildEditView()
+          : _buildOverviewView(),
     );
   }
 
@@ -353,32 +490,38 @@ class _UserProfilePageState extends State<UserProfilePage> {
             title: 'My Account',
             items: [
               _SectionItem(
-                  icon: Icons.person_outline, 
-                  label: 'Personal Info',
-                  trailing: _userProfile?.fullName ?? 'Not set',
-                  isIncomplete: _userProfile?.fullName == null || _userProfile!.fullName.isEmpty,
-                  onTap: () => setState(() => _isEditing = true)
+                icon: Icons.person_outline,
+                label: 'Personal Info',
+                trailing: _userProfile?.fullName ?? 'Not set',
+                isIncomplete:
+                    _userProfile?.fullName == null ||
+                    _userProfile!.fullName.isEmpty,
+                onTap: () => setState(() => _isEditing = true),
               ),
               _SectionItem(
-                  icon: Icons.phone_outlined, 
-                  label: 'Mobile Number',
-                  trailing: _userProfile?.phone ?? 'Not set',
-                  isIncomplete: _userProfile?.phone == null || _userProfile!.phone!.isEmpty,
-                  onTap: () => setState(() => _isEditing = true)
+                icon: Icons.phone_outlined,
+                label: 'Mobile Number',
+                trailing: _userProfile?.phone ?? 'Not set',
+                isIncomplete:
+                    _userProfile?.phone == null || _userProfile!.phone!.isEmpty,
+                onTap: () => setState(() => _isEditing = true),
               ),
               _SectionItem(
-                  icon: Icons.location_on_outlined, 
-                  label: 'Address',
-                  trailing: _userProfile?.city ?? 'Not set',
-                  isIncomplete: _userProfile?.city == null || _userProfile!.city!.isEmpty,
-                  onTap: () => setState(() => _isEditing = true)
+                icon: Icons.location_on_outlined,
+                label: 'Address',
+                trailing: _userProfile?.city ?? 'Not set',
+                isIncomplete:
+                    _userProfile?.city == null || _userProfile!.city!.isEmpty,
+                onTap: () => setState(() => _isEditing = true),
               ),
               _SectionItem(
-                  icon: Icons.wc_outlined, 
-                  label: 'Gender',
-                  trailing: _userProfile?.gender ?? 'Not set',
-                  isIncomplete: _userProfile?.gender == null || _userProfile!.gender!.isEmpty,
-                  onTap: () => setState(() => _isEditing = true)
+                icon: Icons.wc_outlined,
+                label: 'Gender',
+                trailing: _userProfile?.gender ?? 'Not set',
+                isIncomplete:
+                    _userProfile?.gender == null ||
+                    _userProfile!.gender!.isEmpty,
+                onTap: () => setState(() => _isEditing = true),
               ),
             ],
           ),
@@ -386,17 +529,48 @@ class _UserProfilePageState extends State<UserProfilePage> {
           _buildSectionCard(
             title: 'Preferences',
             items: [
-              _SectionItem(icon: Icons.favorite_border, label: 'Wishlist', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const WishlistPage(refreshSignal: 0)))),
-              _SectionItem(icon: Icons.inventory_2_outlined, label: 'My Orders', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const OrdersPage()))),
-              _SectionItem(icon: Icons.history, label: 'Order History', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const HistoryPage()))),
-              _SectionItem(icon: Icons.notifications_outlined, label: 'Notifications'),
-              _SectionItem(icon: Icons.lock_outline, label: 'Privacy & Security'),
+              _SectionItem(
+                icon: Icons.favorite_border,
+                label: 'Wishlist',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const WishlistPage(refreshSignal: 0),
+                  ),
+                ),
+              ),
+              _SectionItem(
+                icon: Icons.inventory_2_outlined,
+                label: 'My Orders',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrdersPage()),
+                ),
+              ),
+              _SectionItem(
+                icon: Icons.history,
+                label: 'Order History',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HistoryPage()),
+                ),
+              ),
+              _SectionItem(
+                icon: Icons.notifications_outlined,
+                label: 'Notifications',
+              ),
+              _SectionItem(
+                icon: Icons.lock_outline,
+                label: 'Privacy & Security',
+              ),
               _SectionItem(icon: Icons.help_outline, label: 'Help & Support'),
               _SectionItem(icon: Icons.info_outline, label: 'About'),
             ],
           ),
           const SizedBox(height: 12),
           _buildSignOutTile(),
+          const SizedBox(height: 10),
+          _buildDeleteAccountTile(),
           const SizedBox(height: 32),
         ],
       ),
@@ -441,30 +615,30 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 child: _selectedImage != null
                     ? Image.file(_selectedImage!, fit: BoxFit.cover)
                     : avatarUrl != null && avatarUrl.isNotEmpty
-                        ? Image.network(
-                            avatarUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Center(
-                              child: Text(
-                                initials,
-                                style: GoogleFonts.urbanist(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF4A7DC8),
-                                ),
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: Text(
-                              initials,
-                              style: GoogleFonts.urbanist(
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF4A7DC8),
-                              ),
+                    ? Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Center(
+                          child: Text(
+                            initials,
+                            style: GoogleFonts.urbanist(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF4A7DC8),
                             ),
                           ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          initials,
+                          style: GoogleFonts.urbanist(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF4A7DC8),
+                          ),
+                        ),
+                      ),
               ),
             ),
             const SizedBox(width: 16),
@@ -503,7 +677,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             color: const Color(0xFFE53935),
                           ),
                         ),
-                        const Icon(Icons.arrow_right, size: 18, color: Color(0xFFE53935)),
+                        const Icon(
+                          Icons.arrow_right,
+                          size: 18,
+                          color: Color(0xFFE53935),
+                        ),
                       ],
                     ),
                   ),
@@ -516,7 +694,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
-  Widget _buildSectionCard({required String title, required List<_SectionItem> items}) {
+  Widget _buildSectionCard({
+    required String title,
+    required List<_SectionItem> items,
+  }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -565,7 +746,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
             return Column(
               children: [
                 if (i > 0)
-                  Divider(height: 1, indent: 56, endIndent: 16, color: Colors.grey[100]),
+                  Divider(
+                    height: 1,
+                    indent: 56,
+                    endIndent: 16,
+                    color: Colors.grey[100],
+                  ),
                 _buildListTile(item),
               ],
             );
@@ -609,8 +795,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 item.trailing!,
                 style: GoogleFonts.urbanist(
                   fontSize: 13,
-                  fontWeight: item.isIncomplete ? FontWeight.bold : FontWeight.normal,
-                  color: item.isIncomplete ? const Color(0xFFE53935) : Colors.grey[500],
+                  fontWeight: item.isIncomplete
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: item.isIncomplete
+                      ? const Color(0xFFE53935)
+                      : Colors.grey[500],
                 ),
               ),
             const SizedBox(width: 4),
@@ -667,6 +857,67 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 
+  Widget _buildDeleteAccountTile() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xff0c1c2c),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: _isDeleting ? null : _onDeleteAccountPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.delete_forever_outlined,
+                  size: 20,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'Delete Account',
+                  style: GoogleFonts.urbanist(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              if (_isDeleting)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─── EDIT VIEW ───────────────────────────────────────────────────────────────
 
   Widget _buildEditView() {
@@ -682,38 +933,36 @@ class _UserProfilePageState extends State<UserProfilePage> {
                 const SizedBox(height: 20),
                 _buildEditAvatar(),
                 const SizedBox(height: 24),
-                _buildEditCard(children: [
-                  _buildOutlinedField(
-                    controller: _nameController,
-                    label: 'Name',
-                    keyboardType: TextInputType.name,
-                    validator: (v) => v?.isEmpty ?? true ? 'Name is required' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildMobileField(),
-                  const SizedBox(height: 16),
-                  _buildEmailField(),
-                  const SizedBox(height: 16),
-                  _buildAddressField(),
-                  const SizedBox(height: 16),
-                  _buildPinCityRow(),
-                  const SizedBox(height: 16),
-                  _buildStateDropdown(),
-                  const SizedBox(height: 16),
-                  _buildGenderDropdown(),
-                ]),
+                _buildEditCard(
+                  children: [
+                    _buildOutlinedField(
+                      controller: _nameController,
+                      label: 'Name',
+                      keyboardType: TextInputType.name,
+                      validator: (v) =>
+                          v?.isEmpty ?? true ? 'Name is required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildMobileField(),
+                    const SizedBox(height: 16),
+                    _buildEmailField(),
+                    const SizedBox(height: 16),
+                    _buildAddressField(),
+                    const SizedBox(height: 16),
+                    _buildPinCityRow(),
+                    const SizedBox(height: 16),
+                    _buildStateDropdown(),
+                    const SizedBox(height: 16),
+                    _buildGenderDropdown(),
+                  ],
+                ),
                 const SizedBox(height: 24),
               ],
             ),
           ),
         ),
         // Bottom Update Profile button
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: _buildUpdateButton(),
-        ),
+        Positioned(bottom: 0, left: 0, right: 0, child: _buildUpdateButton()),
       ],
     );
   }
@@ -746,18 +995,30 @@ class _UserProfilePageState extends State<UserProfilePage> {
               child: _selectedImage != null
                   ? Image.file(_selectedImage!, fit: BoxFit.cover)
                   : avatarUrl != null && avatarUrl.isNotEmpty
-                      ? Image.network(
-                          avatarUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Center(
-                            child: Text(initials,
-                              style: GoogleFonts.urbanist(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF4A7DC8))),
+                  ? Image.network(
+                      avatarUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Center(
+                        child: Text(
+                          initials,
+                          style: GoogleFonts.urbanist(
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF4A7DC8),
                           ),
-                        )
-                      : Center(
-                          child: Text(initials,
-                            style: GoogleFonts.urbanist(fontSize: 36, fontWeight: FontWeight.bold, color: const Color(0xFF4A7DC8))),
                         ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        initials,
+                        style: GoogleFonts.urbanist(
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF4A7DC8),
+                        ),
+                      ),
+                    ),
             ),
           ),
           Container(
@@ -835,7 +1096,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -858,16 +1122,27 @@ class _UserProfilePageState extends State<UserProfilePage> {
           style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
           decoration: InputDecoration(
             labelText: label,
-            labelStyle: GoogleFonts.urbanist(color: Colors.grey[500], fontSize: 13),
+            labelStyle: GoogleFonts.urbanist(
+              color: Colors.grey[500],
+              fontSize: 13,
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide(color: Colors.grey[300]!),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
+              borderSide: const BorderSide(
+                color: Color(0xFF4A7DC8),
+                width: 1.5,
+              ),
             ),
-            contentPadding: const EdgeInsets.only(left: 16, right: 80, top: 14, bottom: 14),
+            contentPadding: const EdgeInsets.only(
+              left: 16,
+              right: 80,
+              top: 14,
+              bottom: 14,
+            ),
             filled: true,
             fillColor: Colors.white,
           ),
@@ -947,7 +1222,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
 
   Widget _buildStateDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedState,
+      initialValue: _selectedState,
       isExpanded: true,
       style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
       decoration: InputDecoration(
@@ -961,18 +1236,23 @@ class _UserProfilePageState extends State<UserProfilePage> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         filled: true,
         fillColor: Colors.white,
       ),
-      items: _indianStates.map((state) => DropdownMenuItem(value: state, child: Text(state))).toList(),
+      items: _indianStates
+          .map((state) => DropdownMenuItem(value: state, child: Text(state)))
+          .toList(),
       onChanged: (v) => setState(() => _selectedState = v),
     );
   }
 
   Widget _buildGenderDropdown() {
     return DropdownButtonFormField<String>(
-      value: _selectedGender,
+      initialValue: _selectedGender,
       isExpanded: true,
       style: GoogleFonts.urbanist(fontSize: 15, color: Colors.black87),
       decoration: InputDecoration(
@@ -986,11 +1266,16 @@ class _UserProfilePageState extends State<UserProfilePage> {
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: Color(0xFF4A7DC8), width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         filled: true,
         fillColor: Colors.white,
       ),
-      items: _genderOptions.map((g) => DropdownMenuItem(value: g, child: Text(g))).toList(),
+      items: _genderOptions
+          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+          .toList(),
       onChanged: (v) => setState(() => _selectedGender = v),
     );
   }
@@ -1007,16 +1292,23 @@ class _UserProfilePageState extends State<UserProfilePage> {
         child: ElevatedButton(
           onPressed: _isSaving ? null : _saveProfile,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _isSaving ? Colors.grey[300] : const Color(0xFF0c1c2c),
+            backgroundColor: _isSaving
+                ? Colors.grey[300]
+                : const Color(0xFF0c1c2c),
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 0,
           ),
           child: _isSaving
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : Text(
                   'Update profile',

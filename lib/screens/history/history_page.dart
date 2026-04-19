@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:dreamventz/services/order_service.dart';
 import 'package:dreamventz/models/order_model.dart';
 import 'package:dreamventz/config/supabase_config.dart';
-import 'package:dreamventz/models/order_model.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -35,9 +34,9 @@ class _HistoryPageState extends State<HistoryPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load history: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load history: $e')));
       }
     }
   }
@@ -80,23 +79,26 @@ class _HistoryPageState extends State<HistoryPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _orders.isEmpty
-              ? Center(
-                  child: Text(
-                    'No historical orders.',
-                    style: GoogleFonts.urbanist(fontSize: 16, color: Colors.grey),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadHistory,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                    itemCount: _orders.length,
-                    itemBuilder: (context, index) {
-                      final order = _orders[index];
-                      return _HistoryCard(order: order);
-                    },
-                  ),
+          ? Center(
+              child: Text(
+                'No historical orders.',
+                style: GoogleFonts.urbanist(fontSize: 16, color: Colors.grey),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadHistory,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
                 ),
+                itemCount: _orders.length,
+                itemBuilder: (context, index) {
+                  final order = _orders[index];
+                  return _HistoryCard(order: order);
+                },
+              ),
+            ),
     );
   }
 }
@@ -155,12 +157,18 @@ class _HistoryCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Placed on ${order.createdAt.toLocal().toString().split(' ')[0]}',
-                      style: GoogleFonts.urbanist(fontSize: 13, color: Colors.grey),
+                      style: GoogleFonts.urbanist(
+                        fontSize: 13,
+                        color: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xffe8f5e9),
                     borderRadius: BorderRadius.circular(20),
@@ -195,13 +203,19 @@ class _HistoryCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           image: item.imageUrl != null
                               ? DecorationImage(
-                                  image: NetworkImage(SupabaseConfig.getImageUrl(item.imageUrl!)),
+                                  image: NetworkImage(
+                                    SupabaseConfig.getImageUrl(item.imageUrl!),
+                                  ),
                                   fit: BoxFit.cover,
                                 )
                               : null,
                         ),
                         child: item.imageUrl == null
-                            ? const Icon(Icons.category, color: Colors.grey, size: 20)
+                            ? const Icon(
+                                Icons.category,
+                                color: Colors.grey,
+                                size: 20,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 12),
@@ -229,7 +243,7 @@ class _HistoryCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                 );
@@ -249,7 +263,9 @@ class _HistoryCard extends StatelessWidget {
             child: Row(
               children: [
                 Icon(
-                  order.status == 'Completed' ? Icons.check_circle : Icons.cancel,
+                  order.status == 'Completed'
+                      ? Icons.check_circle
+                      : Icons.cancel,
                   color: statusColor,
                   size: 20,
                 ),
@@ -264,10 +280,9 @@ class _HistoryCard extends StatelessWidget {
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
 }
-
